@@ -6,56 +6,108 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Staff } from '@/types';
 import { LOCATIONS, ROLES } from '@/lib/constants';
 import { toast } from 'sonner';
-import { Users, Plus } from 'lucide-react';
+import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 
 interface StaffManagementProps {
   staff: Staff[];
   onAddStaff: (staff: Omit<Staff, 'id' | 'created_at'>) => void;
+  onUpdateStaff: (id: string, staff: Omit<Staff, 'id' | 'created_at'>) => void;
+  onDeleteStaff: (id: string) => void;
 }
 
-export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
+export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaff }: StaffManagementProps) {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    role: '',
+    location: '',
+  });
+  const [editFormData, setEditFormData] = useState({
     name: '',
     role: '',
     location: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      if (!formData.name || !formData.role || !formData.location) {
+      if (!addFormData.name || !addFormData.role || !addFormData.location) {
         toast.error('Please fill in all fields');
         return;
       }
 
       const newStaff: Omit<Staff, 'id' | 'created_at'> = {
-        name: formData.name,
-        role: formData.role as Staff['role'],
-        location: formData.location as Staff['location'],
+        name: addFormData.name,
+        role: addFormData.role as Staff['role'],
+        location: addFormData.location as Staff['location'],
       };
 
-      onAddStaff(newStaff);
+      await onAddStaff(newStaff);
       
       // Reset form
-      setFormData({
+      setAddFormData({
         name: '',
         role: '',
         location: '',
       });
-      setShowForm(false);
-
-      toast.success('Staff member added successfully!');
+      setShowAddForm(false);
     } catch (error) {
       toast.error('Failed to add staff member');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    
+    setIsSubmitting(true);
+
+    try {
+      if (!editFormData.name || !editFormData.role || !editFormData.location) {
+        toast.error('Please fill in all fields');
+        return;
+      }
+
+      const updatedStaff: Omit<Staff, 'id' | 'created_at'> = {
+        name: editFormData.name,
+        role: editFormData.role as Staff['role'],
+        location: editFormData.location as Staff['location'],
+      };
+
+      await onUpdateStaff(editingStaff.id, updatedStaff);
+      setEditingStaff(null);
+    } catch (error) {
+      toast.error('Failed to update staff member');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = (member: Staff) => {
+    setEditingStaff(member);
+    setEditFormData({
+      name: member.name,
+      role: member.role,
+      location: member.location,
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await onDeleteStaff(id);
+    } catch (error) {
+      toast.error('Failed to delete staff member');
     }
   };
 
@@ -77,7 +129,7 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
           <h2 className="text-lg font-semibold text-gray-900">Staff Management</h2>
         </div>
         <Button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => setShowAddForm(!showAddForm)}
           size="sm"
           className="flex items-center space-x-1"
         >
@@ -87,20 +139,20 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
       </div>
 
       {/* Add Staff Form */}
-      {showForm && (
+      {showAddForm && (
         <Card>
           <CardHeader>
             <CardTitle>Add New Staff Member</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleAddSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="add-name">Name *</Label>
                 <Input
-                  id="name"
+                  id="add-name"
                   placeholder="Enter staff member name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={addFormData.name}
+                  onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
                   required
                 />
               </div>
@@ -108,8 +160,8 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
               <div className="space-y-2">
                 <Label>Role *</Label>
                 <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  value={addFormData.role}
+                  onValueChange={(value) => setAddFormData({ ...addFormData, role: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
@@ -125,8 +177,8 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
               <div className="space-y-2">
                 <Label>Location *</Label>
                 <Select
-                  value={formData.location}
-                  onValueChange={(value) => setFormData({ ...formData, location: value })}
+                  value={addFormData.location}
+                  onValueChange={(value) => setAddFormData({ ...addFormData, location: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select location" />
@@ -150,7 +202,7 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => setShowAddForm(false)}
                 >
                   Cancel
                 </Button>
@@ -170,9 +222,118 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
                   <h3 className="font-medium text-gray-900">{member.name}</h3>
                   <p className="text-sm text-gray-600">{LOCATIONS[member.location]}</p>
                 </div>
-                <Badge variant={getRoleBadgeVariant(member.role)}>
-                  {ROLES[member.role]}
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={getRoleBadgeVariant(member.role)}>
+                    {ROLES[member.role]}
+                  </Badge>
+                  
+                  {/* Edit Button */}
+                  <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleEdit(member)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Staff Member</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleEditSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-name">Name *</Label>
+                          <Input
+                            id="edit-name"
+                            placeholder="Enter staff member name"
+                            value={editFormData.name}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Role *</Label>
+                          <Select
+                            value={editFormData.role}
+                            onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="godown_staff">Godown Staff</SelectItem>
+                              <SelectItem value="shop_staff">Shop Staff</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Location *</Label>
+                          <Select
+                            value={editFormData.location}
+                            onValueChange={(value) => setEditFormData({ ...editFormData, location: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="godown">Godown</SelectItem>
+                              <SelectItem value="big_shop">Big Shop</SelectItem>
+                              <SelectItem value="small_shop">Small Shop</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            className="flex-1"
+                          >
+                            {isSubmitting ? 'Updating...' : 'Update Staff'}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setEditingStaff(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Delete Button */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {member.name}? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(member.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -183,7 +344,7 @@ export function StaffManagement({ staff, onAddStaff }: StaffManagementProps) {
         <div className="text-center py-8">
           <p className="text-gray-500">No staff members added yet</p>
           <Button 
-            onClick={() => setShowForm(true)}
+            onClick={() => setShowAddForm(true)}
             className="mt-2"
           >
             Add First Staff Member

@@ -9,7 +9,96 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      goods_movements: {
+        Row: {
+          accompanying_person: string | null
+          bundles_count: number
+          condition_notes: string | null
+          created_at: string | null
+          destination: Database["public"]["Enums"]["destination_type"]
+          dispatch_date: string
+          fare_payment: Database["public"]["Enums"]["fare_payment_type"]
+          id: string
+          received_at: string | null
+          received_by: string | null
+          sent_by: string
+          status: Database["public"]["Enums"]["movement_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          accompanying_person?: string | null
+          bundles_count: number
+          condition_notes?: string | null
+          created_at?: string | null
+          destination: Database["public"]["Enums"]["destination_type"]
+          dispatch_date: string
+          fare_payment: Database["public"]["Enums"]["fare_payment_type"]
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          sent_by: string
+          status?: Database["public"]["Enums"]["movement_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          accompanying_person?: string | null
+          bundles_count?: number
+          condition_notes?: string | null
+          created_at?: string | null
+          destination?: Database["public"]["Enums"]["destination_type"]
+          dispatch_date?: string
+          fare_payment?: Database["public"]["Enums"]["fare_payment_type"]
+          id?: string
+          received_at?: string | null
+          received_by?: string | null
+          sent_by?: string
+          status?: Database["public"]["Enums"]["movement_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_movements_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_movements_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: Database["public"]["Enums"]["location_type"]
+          name: string
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location: Database["public"]["Enums"]["location_type"]
+          name: string
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: Database["public"]["Enums"]["location_type"]
+          name?: string
+          role?: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +107,11 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      destination_type: "big_shop" | "small_shop"
+      fare_payment_type: "paid_by_sender" | "to_be_paid_by_receiver"
+      location_type: "godown" | "big_shop" | "small_shop"
+      movement_status: "dispatched" | "received"
+      staff_role: "godown_staff" | "shop_staff" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +226,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      destination_type: ["big_shop", "small_shop"],
+      fare_payment_type: ["paid_by_sender", "to_be_paid_by_receiver"],
+      location_type: ["godown", "big_shop", "small_shop"],
+      movement_status: ["dispatched", "received"],
+      staff_role: ["godown_staff", "shop_staff", "admin"],
+    },
   },
 } as const

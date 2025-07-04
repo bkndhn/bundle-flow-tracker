@@ -5,6 +5,7 @@ export interface Staff {
   role: 'godown_staff' | 'shop_staff' | 'admin';
   location: 'godown' | 'big_shop' | 'small_shop';
   created_at: string;
+  updated_at?: string;
 }
 
 export interface GoodsMovement {
