@@ -1,6 +1,6 @@
 
 import { ReactNode } from 'react';
-import { Truck, Package, Users, BarChart3 } from 'lucide-react';
+import { Truck, Package, Users, BarChart3, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -14,6 +14,7 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'dispatch', label: 'Dispatch', icon: Truck },
     { id: 'receive', label: 'Receive', icon: Package },
+    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'staff', label: 'Staff', icon: Users },
   ];
 
@@ -34,7 +35,7 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;

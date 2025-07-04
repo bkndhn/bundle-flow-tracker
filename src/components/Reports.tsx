@@ -1,0 +1,201 @@
+
+import { useState } from 'react';
+import { GoodsMovement } from '@/types';
+import { LOCATIONS, MOVEMENT_STATUS, FARE_PAYMENT_OPTIONS } from '@/lib/constants';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar, Download, Search, Filter } from 'lucide-react';
+import { format } from 'date-fns';
+
+interface ReportsProps {
+  movements: GoodsMovement[];
+}
+
+export function Reports({ movements }: ReportsProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
+
+  const filteredMovements = movements.filter(movement => {
+    const matchesSearch = 
+      movement.sent_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.accompanying_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.destination.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const formatDateTime = (dateString: string) => {
+    return format(new Date(dateString), 'dd/MM/yyyy hh:mm a');
+  };
+
+  const getStatusBadge = (status: string) => {
+    return status === 'received' ? (
+      <Badge variant="default" className="bg-green-100 text-green-800">
+        {MOVEMENT_STATUS.received}
+      </Badge>
+    ) : (
+      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+        {MOVEMENT_STATUS.dispatched}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Movement Reports
+          </CardTitle>
+          <CardDescription>
+            Complete history of all goods movements with detailed information
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by staff name, destination, or accompanying person..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="dispatched">Dispatched</option>
+                <option value="received">Received</option>
+              </select>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="text-sm text-blue-600 font-medium">Total Movements</div>
+              <div className="text-2xl font-bold text-blue-900">{filteredMovements.length}</div>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="text-sm text-green-600 font-medium">Completed</div>
+              <div className="text-2xl font-bold text-green-900">
+                {filteredMovements.filter(m => m.status === 'received').length}
+              </div>
+            </div>
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <div className="text-sm text-yellow-600 font-medium">Pending</div>
+              <div className="text-2xl font-bold text-yellow-900">
+                {filteredMovements.filter(m => m.status === 'dispatched').length}
+              </div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <div className="text-sm text-purple-600 font-medium">Total Bundles</div>
+              <div className="text-2xl font-bold text-purple-900">
+                {filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)}
+              </div>
+            </div>
+          </div>
+
+          {/* Movements Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold">Dispatch Date</TableHead>
+                  <TableHead className="font-semibold">Bundles</TableHead>
+                  <TableHead className="font-semibold">Destination</TableHead>
+                  <TableHead className="font-semibold">Sent By</TableHead>
+                  <TableHead className="font-semibold">Accompanying</TableHead>
+                  <TableHead className="font-semibold">Fare Payment</TableHead>
+                  <TableHead className="font-semibold">Received By</TableHead>
+                  <TableHead className="font-semibold">Received At</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredMovements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                      No movements found matching your criteria
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredMovements.map((movement) => (
+                    <TableRow key={movement.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        {formatDateTime(movement.dispatch_date)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{movement.bundles_count}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium text-blue-600">
+                          {LOCATIONS[movement.destination]}
+                        </span>
+                      </TableCell>
+                      <TableCell>{movement.sent_by_name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        {movement.accompanying_person || (
+                          <span className="text-gray-400 italic text-sm">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          movement.fare_payment === 'paid_by_sender' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {FARE_PAYMENT_OPTIONS[movement.fare_payment]}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {movement.received_by_name || (
+                          <span className="text-gray-400 italic text-sm">Pending</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {movement.received_at ? (
+                          formatDateTime(movement.received_at)
+                        ) : (
+                          <span className="text-gray-400 italic text-sm">Pending</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(movement.status)}</TableCell>
+                      <TableCell>
+                        {movement.condition_notes ? (
+                          <span className="text-sm">{movement.condition_notes}</span>
+                        ) : (
+                          <span className="text-gray-400 italic text-sm">No notes</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

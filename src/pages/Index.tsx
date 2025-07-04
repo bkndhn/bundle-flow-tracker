@@ -5,6 +5,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { DispatchForm } from '@/components/DispatchForm';
 import { ReceiveForm } from '@/components/ReceiveForm';
 import { StaffManagement } from '@/components/StaffManagement';
+import { Reports } from '@/components/Reports';
 import { Staff, GoodsMovement } from '@/types';
 
 const Index = () => {
@@ -131,6 +132,8 @@ const Index = () => {
           pendingMovements={pendingMovements}
           onReceive={handleReceive} 
         />;
+      case 'reports':
+        return <Reports movements={movements} />;
       case 'staff':
         return <StaffManagement staff={staff} onAddStaff={handleAddStaff} />;
       default:
