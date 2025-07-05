@@ -1,5 +1,6 @@
-
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoginForm } from '@/components/LoginForm';
 import { Layout } from '@/components/Layout';
 import { Dashboard } from '@/components/Dashboard';
 import { DispatchForm } from '@/components/DispatchForm';
@@ -11,19 +12,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Index = () => {
+  const { user, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [staff, setStaff] = useState<Staff[]>([]);
   const [movements, setMovements] = useState<GoodsMovement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   // Load data from Supabase
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       
       // Load staff
       const { data: staffData, error: staffError } = await supabase
@@ -64,7 +68,7 @@ const Index = () => {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -75,10 +79,12 @@ const Index = () => {
         .insert([{
           dispatch_date: movement.dispatch_date,
           bundles_count: movement.bundles_count,
+          item: movement.item,
           destination: movement.destination,
           sent_by: movement.sent_by,
           fare_payment: movement.fare_payment,
-          accompanying_person: movement.accompanying_person || null,
+          accompanying_person: movement.accompanying_person,
+          auto_name: movement.auto_name,
           status: movement.status,
         }])
         .select()
@@ -192,13 +198,28 @@ const Index = () => {
 
   const pendingMovements = movements.filter(m => m.status === 'dispatched');
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
   const renderCurrentPage = () => {
-    if (loading) {
+    if (dataLoading) {
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
-            <p className="text-gray-600">Loading...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+            <p className="text-white">Loading...</p>
           </div>
         </div>
       );

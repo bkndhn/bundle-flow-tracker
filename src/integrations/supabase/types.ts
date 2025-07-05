@@ -9,9 +9,34 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          password_hash: string
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          password_hash: string
+          role: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          password_hash?: string
+          role?: string
+        }
+        Relationships: []
+      }
       goods_movements: {
         Row: {
           accompanying_person: string | null
+          auto_name: string
           bundles_count: number
           condition_notes: string | null
           created_at: string | null
@@ -19,6 +44,7 @@ export type Database = {
           dispatch_date: string
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id: string
+          item: string
           received_at: string | null
           received_by: string | null
           sent_by: string
@@ -27,6 +53,7 @@ export type Database = {
         }
         Insert: {
           accompanying_person?: string | null
+          auto_name?: string
           bundles_count: number
           condition_notes?: string | null
           created_at?: string | null
@@ -34,6 +61,7 @@ export type Database = {
           dispatch_date: string
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
+          item?: string
           received_at?: string | null
           received_by?: string | null
           sent_by: string
@@ -42,6 +70,7 @@ export type Database = {
         }
         Update: {
           accompanying_person?: string | null
+          auto_name?: string
           bundles_count?: number
           condition_notes?: string | null
           created_at?: string | null
@@ -49,6 +78,7 @@ export type Database = {
           dispatch_date?: string
           fare_payment?: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
+          item?: string
           received_at?: string | null
           received_by?: string | null
           sent_by?: string
