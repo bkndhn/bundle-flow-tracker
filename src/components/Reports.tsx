@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Download, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -17,6 +18,8 @@ interface ReportsProps {
 export function Reports({ movements }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
+  const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
+  const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant'>('all');
 
   const filteredMovements = movements.filter(movement => {
     const matchesSearch = 
@@ -26,8 +29,10 @@ export function Reports({ movements }: ReportsProps) {
       movement.destination.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
+    const matchesLocation = locationFilter === 'all' || movement.destination === locationFilter;
+    const matchesItem = itemFilter === 'all' || movement.item === itemFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesLocation && matchesItem;
   });
 
   const formatDateTime = (dateString: string) => {
@@ -72,16 +77,40 @@ export function Reports({ movements }: ReportsProps) {
                 />
               </div>
             </div>
-            <div className="flex gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="dispatched">Dispatched</option>
-                <option value="received">Received</option>
-              </select>
+            <div className="flex gap-2 flex-wrap">
+              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="dispatched">Dispatched</SelectItem>
+                  <SelectItem value="received">Received</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={locationFilter} onValueChange={(value: any) => setLocationFilter(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="All Locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  <SelectItem value="big_shop">Big Shop</SelectItem>
+                  <SelectItem value="small_shop">Small Shop</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={itemFilter} onValueChange={(value: any) => setItemFilter(value)}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="All Items" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  <SelectItem value="shirt">Shirt</SelectItem>
+                  <SelectItem value="pant">Pant</SelectItem>
+                </SelectContent>
+              </Select>
+              
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -122,8 +151,10 @@ export function Reports({ movements }: ReportsProps) {
                 <TableRow className="bg-gray-50">
                   <TableHead className="font-semibold">Dispatch Date</TableHead>
                   <TableHead className="font-semibold">Bundles</TableHead>
+                  <TableHead className="font-semibold">Item</TableHead>
                   <TableHead className="font-semibold">Destination</TableHead>
                   <TableHead className="font-semibold">Sent By</TableHead>
+                  <TableHead className="font-semibold">Auto Name</TableHead>
                   <TableHead className="font-semibold">Accompanying</TableHead>
                   <TableHead className="font-semibold">Fare Payment</TableHead>
                   <TableHead className="font-semibold">Received By</TableHead>
@@ -135,7 +166,7 @@ export function Reports({ movements }: ReportsProps) {
               <TableBody>
                 {filteredMovements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       No movements found matching your criteria
                     </TableCell>
                   </TableRow>
@@ -149,11 +180,15 @@ export function Reports({ movements }: ReportsProps) {
                         <Badge variant="outline">{movement.bundles_count}</Badge>
                       </TableCell>
                       <TableCell>
+                        <Badge variant="outline" className="capitalize">{movement.item}</Badge>
+                      </TableCell>
+                      <TableCell>
                         <span className="font-medium text-blue-600">
                           {LOCATIONS[movement.destination]}
                         </span>
                       </TableCell>
                       <TableCell>{movement.sent_by_name || 'Unknown'}</TableCell>
+                      <TableCell>{movement.auto_name || 'N/A'}</TableCell>
                       <TableCell>
                         {movement.accompanying_person || (
                           <span className="text-gray-400 italic text-sm">None</span>

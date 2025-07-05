@@ -13,8 +13,8 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     
     const success = await login(email, password);
@@ -23,6 +23,12 @@ export function LoginForm() {
     }
     
     setIsLoading(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && email && password) {
+      handleSubmit();
+    }
   };
 
   const predefinedUsers = [
@@ -53,6 +59,7 @@ export function LoginForm() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 />
@@ -65,6 +72,7 @@ export function LoginForm() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   required
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 />

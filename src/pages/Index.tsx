@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
@@ -22,6 +23,11 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       loadData();
+      // Set up auto-refresh every 5 seconds
+      const interval = setInterval(() => {
+        loadData();
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -57,10 +63,24 @@ const Index = () => {
         toast.error('Failed to load movement data');
       } else {
         // Transform the data to match our interface
-        const transformedMovements = movementsData?.map(movement => ({
-          ...movement,
-          sent_by_name: movement.sent_by_staff?.name,
-          received_by_name: movement.received_by_staff?.name,
+        const transformedMovements: GoodsMovement[] = movementsData?.map(movement => ({
+          id: movement.id,
+          dispatch_date: movement.dispatch_date,
+          bundles_count: movement.bundles_count,
+          item: movement.item as 'shirt' | 'pant',
+          destination: movement.destination,
+          sent_by: movement.sent_by,
+          sent_by_name: movement.sent_by_staff?.name || '',
+          fare_payment: movement.fare_payment,
+          accompanying_person: movement.accompanying_person || '',
+          auto_name: movement.auto_name,
+          received_at: movement.received_at || undefined,
+          received_by: movement.received_by || undefined,
+          received_by_name: movement.received_by_staff?.name || '',
+          condition_notes: movement.condition_notes || undefined,
+          status: movement.status,
+          created_at: movement.created_at || '',
+          updated_at: movement.updated_at || '',
         })) || [];
         setMovements(transformedMovements);
       }
@@ -95,7 +115,7 @@ const Index = () => {
         toast.error('Failed to dispatch goods');
       } else {
         toast.success('Goods dispatched successfully!');
-        loadData(); // Reload data to get updated list
+        loadData(); // Refresh data immediately
       }
     } catch (error) {
       console.error('Error dispatching goods:', error);
@@ -126,7 +146,7 @@ const Index = () => {
         toast.error('Failed to update received goods');
       } else {
         toast.success('Goods received successfully!');
-        loadData(); // Reload data to get updated list
+        loadData(); // Refresh data immediately
       }
     } catch (error) {
       console.error('Error receiving goods:', error);
@@ -145,7 +165,7 @@ const Index = () => {
         toast.error('Failed to add staff member');
       } else {
         toast.success('Staff member added successfully!');
-        loadData(); // Reload data to get updated list
+        loadData(); // Refresh data immediately
       }
     } catch (error) {
       console.error('Error adding staff:', error);
@@ -168,7 +188,7 @@ const Index = () => {
         toast.error('Failed to update staff member');
       } else {
         toast.success('Staff member updated successfully!');
-        loadData(); // Reload data to get updated list
+        loadData(); // Refresh data immediately
       }
     } catch (error) {
       console.error('Error updating staff:', error);
@@ -188,7 +208,7 @@ const Index = () => {
         toast.error('Failed to delete staff member');
       } else {
         toast.success('Staff member deleted successfully!');
-        loadData(); // Reload data to get updated list
+        loadData(); // Refresh data immediately
       }
     } catch (error) {
       console.error('Error deleting staff:', error);
@@ -196,7 +216,20 @@ const Index = () => {
     }
   };
 
-  const pendingMovements = movements.filter(m => m.status === 'dispatched');
+  // Filter pending movements based on user role
+  const getFilteredPendingMovements = () => {
+    const pending = movements.filter(m => m.status === 'dispatched');
+    
+    if (user?.role === 'small_shop_manager') {
+      return pending.filter(m => m.destination === 'small_shop');
+    } else if (user?.role === 'big_shop_manager') {
+      return pending.filter(m => m.destination === 'big_shop');
+    }
+    
+    return pending;
+  };
+
+  const pendingMovements = getFilteredPendingMovements();
 
   if (loading) {
     return (
@@ -227,6 +260,14 @@ const Index = () => {
 
     switch (currentPage) {
       case 'dashboard':
+        // Only show dashboard for admin users
+        if (user.role !== 'admin') {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-white">Access denied. Dashboard is only available for administrators.</p>
+            </div>
+          );
+        }
         return <Dashboard movements={movements} />;
       case 'dispatch':
         return <DispatchForm staff={staff} onDispatch={handleDispatch} />;
@@ -246,7 +287,11 @@ const Index = () => {
           onDeleteStaff={handleDeleteStaff}
         />;
       default:
-        return <Dashboard movements={movements} />;
+        return user.role === 'admin' ? <Dashboard movements={movements} /> : (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-white">Welcome! Please use the navigation to access your available sections.</p>
+          </div>
+        );
     }
   };
 

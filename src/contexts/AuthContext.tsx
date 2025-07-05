@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userObj: AppUser = {
         id: data.id,
         email: data.email,
-        role: data.role,
+        role: data.role as 'admin' | 'godown_manager' | 'small_shop_manager' | 'big_shop_manager',
         created_at: data.created_at
       };
 
