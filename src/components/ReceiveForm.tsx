@@ -80,8 +80,8 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
           {pendingMovements.map((movement) => (
             <Card 
               key={movement.id}
-              className={`cursor-pointer transition-colors ${
-                selectedMovement === movement.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+              className={`cursor-pointer transition-colors backdrop-blur-sm bg-white/70 border-white/30 ${
+                selectedMovement === movement.id ? 'ring-2 ring-blue-400 bg-blue-50/60' : ''
               }`}
               onClick={() => setSelectedMovement(movement.id)}
             >
@@ -89,10 +89,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Badge variant="secondary">Dispatched</Badge>
+                      <Badge variant="secondary" className="bg-yellow-100/80 text-yellow-800">Dispatched</Badge>
                       <span className="text-sm font-medium">
                         {movement.bundles_count} bundles
                       </span>
+                      <Badge variant="outline" className="capitalize bg-white/60">
+                        {movement.item}
+                      </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
                       To {LOCATIONS[movement.destination]}
@@ -100,6 +103,11 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                     <p className="text-xs text-gray-500">
                       Sent: {new Date(movement.dispatch_date).toLocaleString()}
                     </p>
+                    {movement.auto_name && (
+                      <p className="text-xs text-green-600">
+                        Auto: {movement.auto_name}
+                      </p>
+                    )}
                     {movement.accompanying_person && (
                       <p className="text-xs text-blue-600">
                         Accompanied by: {movement.accompanying_person}
@@ -119,9 +127,9 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
       {/* Receive Form */}
       {selectedMovement && movement && (
-        <Card>
+        <Card className="backdrop-blur-sm bg-white/80 border-white/40">
           <CardHeader>
-            <CardTitle>Confirm Receipt</CardTitle>
+            <CardTitle className="text-gray-800">Confirm Receipt</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -131,23 +139,29 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 <Input 
                   value={new Date().toLocaleString()} 
                   disabled 
-                  className="bg-gray-50"
+                  className="bg-gray-50/60"
                 />
               </div>
 
               {/* Movement Details */}
-              <div className="bg-gray-50 p-4 rounded-md space-y-2">
+              <div className="bg-gray-50/60 p-4 rounded-md space-y-2 backdrop-blur-sm">
                 <h3 className="font-medium text-gray-900">Movement Details</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700">
+                  <strong>Item:</strong> <span className="capitalize">{movement.item}</span>
+                </p>
+                <p className="text-sm text-gray-700">
                   <strong>Bundles:</strong> {movement.bundles_count}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700">
+                  <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
+                </p>
+                <p className="text-sm text-gray-700">
                   <strong>Destination:</strong> {LOCATIONS[movement.destination]}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700">
                   <strong>Sent by:</strong> {movement.sent_by_name}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700">
                   <strong>Fare:</strong> {movement.fare_payment === 'paid_by_sender' ? 'Paid by Sender' : 'To Be Paid by Receiver'}
                 </p>
               </div>
@@ -159,7 +173,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   value={formData.received_by}
                   onValueChange={(value) => setFormData({ ...formData, received_by: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white/80">
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -181,12 +195,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   value={formData.condition_notes}
                   onChange={(e) => setFormData({ ...formData, condition_notes: e.target.value })}
                   rows={3}
+                  className="bg-white/80"
                 />
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700" 
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Confirming Receipt...' : 'Confirm Receipt'}
@@ -198,7 +213,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
       {pendingMovements.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500">No pending receipts at the moment</p>
+          <p className="text-gray-600">No pending receipts at the moment</p>
         </div>
       )}
     </div>

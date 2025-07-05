@@ -30,13 +30,11 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
         ];
       case 'godown_manager':
         return [
-          ...baseNav,
           { id: 'dispatch', label: 'Dispatch', icon: Truck },
         ];
       case 'small_shop_manager':
       case 'big_shop_manager':
         return [
-          ...baseNav,
           { id: 'receive', label: 'Receive', icon: Package },
         ];
       default:
@@ -47,13 +45,13 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
   const navigation = getNavigationForRole();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="backdrop-blur-xl bg-white/10 border-b border-white/20 shadow-xl">
+      <header className="backdrop-blur-sm bg-white/70 border-b border-white/30 shadow-sm">
         <div className="px-4 py-3 flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-white">Goods Movement Tracker</h1>
-            <p className="text-sm text-white/80">
+            <h1 className="text-xl font-bold text-gray-800">Goods Movement Tracker</h1>
+            <p className="text-sm text-gray-600">
               {user?.role === 'admin' && 'Admin Portal'}
               {user?.role === 'godown_manager' && 'Godown Management'}
               {user?.role === 'small_shop_manager' && 'Small Shop Management'}
@@ -61,15 +59,15 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-white/80 text-sm">{user?.email}</span>
+            <span className="text-gray-600 text-sm hidden sm:block">{user?.email}</span>
             <Button
               onClick={logout}
               variant="outline"
               size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="bg-white/60 border-gray-200 text-gray-700 hover:bg-white/80 text-xs sm:text-sm px-2 sm:px-3"
             >
-              <LogOut className="h-4 w-4 mr-1" />
-              Logout
+              <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -81,8 +79,8 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-xl bg-white/10 border-t border-white/20">
-        <div className={`grid gap-1 ${navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-sm bg-white/80 border-t border-white/30">
+        <div className={`grid gap-1 ${navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : navigation.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -94,8 +92,8 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
                 className={cn(
                   "flex flex-col items-center py-2 px-1 text-xs transition-colors",
                   isActive 
-                    ? "text-white bg-white/20" 
-                    : "text-white/70 hover:text-white hover:bg-white/10"
+                    ? "text-blue-600 bg-blue-50" 
+                    : "text-gray-600 hover:text-blue-600 hover:bg-blue-50/50"
                 )}
               >
                 <Icon className="h-5 w-5 mb-1" />

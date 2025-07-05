@@ -31,28 +31,21 @@ export function LoginForm() {
     }
   };
 
-  const predefinedUsers = [
-    { email: 'goodstracker@admin.com', label: 'Admin' },
-    { email: 'manager@godown.com', label: 'Godown Manager' },
-    { email: 'manager@smallshop.com', label: 'Small Shop Manager' },
-    { email: 'manager@bigshop.com', label: 'Big Shop Manager' },
-  ];
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
       <div className="w-full max-w-md">
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
+        <Card className="backdrop-blur-sm bg-white/80 border-white/40 shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-white flex items-center justify-center gap-2">
+            <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
               <LogIn className="h-6 w-6" />
               Goods Movement Tracker
             </CardTitle>
-            <p className="text-white/80">Sign in to continue</p>
+            <p className="text-gray-600">Sign in to continue</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white">Email</Label>
+                <Label htmlFor="email" className="text-gray-700">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -61,11 +54,11 @@ export function LoginForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={handleKeyPress}
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  className="bg-white/90 border-gray-200"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -74,36 +67,17 @@ export function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={handleKeyPress}
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  className="bg-white/90 border-gray-200"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            
-            <div className="mt-6">
-              <p className="text-white/80 text-sm mb-3">Demo credentials:</p>
-              <div className="space-y-2">
-                {predefinedUsers.map((user) => (
-                  <button
-                    key={user.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(user.email);
-                      setPassword('demo123');
-                    }}
-                    className="w-full text-left text-xs text-white/70 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded transition-colors"
-                  >
-                    {user.label}: {user.email}
-                  </button>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

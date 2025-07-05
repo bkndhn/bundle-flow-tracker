@@ -28,8 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demo purposes, we'll use simple email-based authentication
-      // In production, you'd hash and verify passwords properly
+      // Simple authentication - check if password is 123456
+      if (password !== '123456') {
+        toast.error('Invalid password. Please use 123456');
+        return false;
+      }
+
+      // Check if user exists in database
       const { data, error } = await supabase
         .from('app_users')
         .select('*')
@@ -37,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error || !data) {
-        toast.error('Invalid credentials');
+        toast.error('Invalid email address');
         return false;
       }
 

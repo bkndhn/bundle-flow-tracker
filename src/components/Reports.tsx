@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Search, Filter } from 'lucide-react';
+import { Calendar, Download, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ReportsProps {
@@ -26,6 +26,7 @@ export function Reports({ movements }: ReportsProps) {
       movement.sent_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.accompanying_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.auto_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.destination.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
@@ -53,13 +54,13 @@ export function Reports({ movements }: ReportsProps) {
 
   return (
     <div className="p-4 space-y-4">
-      <Card>
+      <Card className="backdrop-blur-sm bg-white/80 border-white/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-800">
             <Calendar className="h-5 w-5" />
             Movement Reports
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             Complete history of all goods movements with detailed information
           </CardDescription>
         </CardHeader>
@@ -70,16 +71,16 @@ export function Reports({ movements }: ReportsProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by staff name, destination, or accompanying person..."
+                  placeholder="Search by staff name, destination, auto name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white/90"
                 />
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] bg-white/90">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -90,7 +91,7 @@ export function Reports({ movements }: ReportsProps) {
               </Select>
               
               <Select value={locationFilter} onValueChange={(value: any) => setLocationFilter(value)}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] bg-white/90">
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
                 <SelectContent>
@@ -101,7 +102,7 @@ export function Reports({ movements }: ReportsProps) {
               </Select>
               
               <Select value={itemFilter} onValueChange={(value: any) => setItemFilter(value)}>
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[120px] bg-white/90">
                   <SelectValue placeholder="All Items" />
                 </SelectTrigger>
                 <SelectContent>
@@ -111,7 +112,7 @@ export function Reports({ movements }: ReportsProps) {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-white/70">
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
@@ -120,23 +121,23 @@ export function Reports({ movements }: ReportsProps) {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="bg-blue-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-blue-600 font-medium">Total Movements</div>
               <div className="text-2xl font-bold text-blue-900">{filteredMovements.length}</div>
             </div>
-            <div className="bg-green-50 p-3 rounded-lg">
+            <div className="bg-green-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-green-600 font-medium">Completed</div>
               <div className="text-2xl font-bold text-green-900">
                 {filteredMovements.filter(m => m.status === 'received').length}
               </div>
             </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
+            <div className="bg-yellow-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-yellow-600 font-medium">Pending</div>
               <div className="text-2xl font-bold text-yellow-900">
                 {filteredMovements.filter(m => m.status === 'dispatched').length}
               </div>
             </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
+            <div className="bg-purple-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-purple-600 font-medium">Total Bundles</div>
               <div className="text-2xl font-bold text-purple-900">
                 {filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)}
@@ -145,16 +146,16 @@ export function Reports({ movements }: ReportsProps) {
           </div>
 
           {/* Movements Table */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-hidden bg-white/60 backdrop-blur-sm">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-gray-50/80">
                   <TableHead className="font-semibold">Dispatch Date</TableHead>
-                  <TableHead className="font-semibold">Bundles</TableHead>
                   <TableHead className="font-semibold">Item</TableHead>
+                  <TableHead className="font-semibold">Bundles</TableHead>
                   <TableHead className="font-semibold">Destination</TableHead>
-                  <TableHead className="font-semibold">Sent By</TableHead>
                   <TableHead className="font-semibold">Auto Name</TableHead>
+                  <TableHead className="font-semibold">Sent By</TableHead>
                   <TableHead className="font-semibold">Accompanying</TableHead>
                   <TableHead className="font-semibold">Fare Payment</TableHead>
                   <TableHead className="font-semibold">Received By</TableHead>
@@ -172,23 +173,27 @@ export function Reports({ movements }: ReportsProps) {
                   </TableRow>
                 ) : (
                   filteredMovements.map((movement) => (
-                    <TableRow key={movement.id} className="hover:bg-gray-50">
+                    <TableRow key={movement.id} className="hover:bg-gray-50/60">
                       <TableCell className="font-medium">
                         {formatDateTime(movement.dispatch_date)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{movement.bundles_count}</Badge>
+                        <Badge variant="outline" className="capitalize bg-white/80">{movement.item}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">{movement.item}</Badge>
+                        <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
                       </TableCell>
                       <TableCell>
                         <span className="font-medium text-blue-600">
                           {LOCATIONS[movement.destination]}
                         </span>
                       </TableCell>
+                      <TableCell className="font-medium">
+                        {movement.auto_name || (
+                          <span className="text-gray-400 italic text-sm">Not specified</span>
+                        )}
+                      </TableCell>
                       <TableCell>{movement.sent_by_name || 'Unknown'}</TableCell>
-                      <TableCell>{movement.auto_name || 'N/A'}</TableCell>
                       <TableCell>
                         {movement.accompanying_person || (
                           <span className="text-gray-400 italic text-sm">None</span>

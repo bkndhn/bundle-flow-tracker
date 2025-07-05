@@ -19,15 +19,10 @@ const Index = () => {
   const [movements, setMovements] = useState<GoodsMovement[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Load data from Supabase
+  // Load data from Supabase - removed auto-refresh interval
   useEffect(() => {
     if (user) {
       loadData();
-      // Set up auto-refresh every 5 seconds
-      const interval = setInterval(() => {
-        loadData();
-      }, 5000);
-      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -115,7 +110,7 @@ const Index = () => {
         toast.error('Failed to dispatch goods');
       } else {
         toast.success('Goods dispatched successfully!');
-        loadData(); // Refresh data immediately
+        loadData(); // Refresh data after successful dispatch
       }
     } catch (error) {
       console.error('Error dispatching goods:', error);
@@ -146,7 +141,7 @@ const Index = () => {
         toast.error('Failed to update received goods');
       } else {
         toast.success('Goods received successfully!');
-        loadData(); // Refresh data immediately
+        loadData(); // Refresh data after successful receive
       }
     } catch (error) {
       console.error('Error receiving goods:', error);
@@ -165,7 +160,7 @@ const Index = () => {
         toast.error('Failed to add staff member');
       } else {
         toast.success('Staff member added successfully!');
-        loadData(); // Refresh data immediately
+        loadData(); // Refresh data after successful add
       }
     } catch (error) {
       console.error('Error adding staff:', error);
@@ -188,7 +183,7 @@ const Index = () => {
         toast.error('Failed to update staff member');
       } else {
         toast.success('Staff member updated successfully!');
-        loadData(); // Refresh data immediately
+        loadData(); // Refresh data after successful update
       }
     } catch (error) {
       console.error('Error updating staff:', error);
@@ -208,7 +203,7 @@ const Index = () => {
         toast.error('Failed to delete staff member');
       } else {
         toast.success('Staff member deleted successfully!');
-        loadData(); // Refresh data immediately
+        loadData(); // Refresh data after successful delete
       }
     } catch (error) {
       console.error('Error deleting staff:', error);
@@ -233,10 +228,10 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-          <p className="text-white">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -251,8 +246,8 @@ const Index = () => {
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-            <p className="text-white">Loading...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-gray-600">Loading...</p>
           </div>
         </div>
       );
@@ -264,7 +259,7 @@ const Index = () => {
         if (user.role !== 'admin') {
           return (
             <div className="flex items-center justify-center h-64">
-              <p className="text-white">Access denied. Dashboard is only available for administrators.</p>
+              <p className="text-gray-600">Access denied. Dashboard is only available for administrators.</p>
             </div>
           );
         }
@@ -289,7 +284,7 @@ const Index = () => {
       default:
         return user.role === 'admin' ? <Dashboard movements={movements} /> : (
           <div className="flex items-center justify-center h-64">
-            <p className="text-white">Welcome! Please use the navigation to access your available sections.</p>
+            <p className="text-gray-600">Welcome! Please use the navigation to access your available sections.</p>
           </div>
         );
     }
