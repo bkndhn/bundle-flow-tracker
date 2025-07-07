@@ -1,82 +1,75 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, AuthContextType } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Mock users for authentication
+const mockUsers: (AppUser & { password: string })[] = [
+  {
+    id: '1',
+    email: 'admin@goods.com',
+    password: 'Goodsans7322',
+    role: 'admin',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    email: 'manager@godown.com',
+    password: 'Gdndis65',
+    role: 'godown_manager',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    email: 'manager@smallshop.com',
+    password: 'Mngrss78',
+    role: 'small_shop_manager',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    email: 'manager@bigshop.com',
+    password: 'Mngrbs78',
+    role: 'big_shop_manager',
+    created_at: new Date().toISOString(),
+  },
+];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const storedUser = localStorage.getItem('app_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error('Error checking user:', error);
+    // Check if user is already logged in
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
     setLoading(false);
-  };
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      // Updated password validation for different roles
-      const validCredentials = {
-        'admin@goods.com': 'Goodsans7322',
-        'manager@godown.com': 'Gdndis65',
-        'manager@smallshop.com': 'Mngrss78',
-        'manager@bigshop.com': 'Mngrbs78'
+    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
+    
+    if (foundUser) {
+      const userWithoutPassword = {
+        id: foundUser.id,
+        email: foundUser.email,
+        role: foundUser.role,
+        created_at: foundUser.created_at,
       };
-
-      const validPassword = validCredentials[email as keyof typeof validCredentials];
-      
-      if (!validPassword || password !== validPassword) {
-        toast.error('Invalid email or password');
-        return false;
-      }
-
-      // Check if user exists in database
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (error || !data) {
-        toast.error('Invalid email address');
-        return false;
-      }
-
-      const userObj: AppUser = {
-        id: data.id,
-        email: data.email,
-        role: data.role as 'admin' | 'godown_manager' | 'small_shop_manager' | 'big_shop_manager',
-        created_at: data.created_at
-      };
-
-      setUser(userObj);
-      localStorage.setItem('app_user', JSON.stringify(userObj));
-      toast.success('Login successful!');
+      setUser(userWithoutPassword);
+      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Login failed');
-      return false;
     }
+    
+    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('app_user');
-    toast.success('Logged out successfully');
+    localStorage.removeItem('currentUser');
   };
 
   return (
@@ -86,10 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}
