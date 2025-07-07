@@ -28,9 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simple authentication - check if password is 123456
-      if (password !== '123456') {
-        toast.error('Invalid password. Please use 123456');
+      // Updated password validation for different roles
+      const validCredentials = {
+        'admin@goods.com': 'Goodsans7322',
+        'manager@godown.com': 'Gdndis65',
+        'manager@smallshop.com': 'Mngrss78',
+        'manager@bigshop.com': 'Mngrbs78'
+      };
+
+      const validPassword = validCredentials[email as keyof typeof validCredentials];
+      
+      if (!validPassword || password !== validPassword) {
+        toast.error('Invalid email or password');
         return false;
       }
 
