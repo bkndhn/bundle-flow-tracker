@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Staff, GoodsMovement } from '@/types';
 import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReceiveFormProps {
   staff: Staff[];
@@ -23,6 +23,7 @@ interface ReceiveFormProps {
 }
 
 export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormProps) {
+  const { user } = useAuth();
   const [selectedMovement, setSelectedMovement] = useState<string>('');
   const [formData, setFormData] = useState({
     received_by: '',
@@ -31,9 +32,22 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const movement = pendingMovements.find(m => m.id === selectedMovement);
-  const shopStaff = staff.filter(s => 
-    s.location === 'big_shop' || s.location === 'small_shop'
-  );
+
+  // Filter staff based on logged-in user
+  const getFilteredStaff = () => {
+    const userEmail = user?.email;
+    
+    if (userEmail === 'manager@smallshop.com') {
+      return staff.filter(s => s.location === 'small_shop');
+    } else if (userEmail === 'manager@bigshop.com') {
+      return staff.filter(s => s.location === 'big_shop');
+    } else {
+      // Admin or other users see all shop staff
+      return staff.filter(s => s.location === 'big_shop' || s.location === 'small_shop');
+    }
+  };
+
+  const filteredStaff = getFilteredStaff();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +212,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {shopStaff.map((member) => (
+                    {filteredStaff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name} ({LOCATIONS[member.location]})
                       </SelectItem>

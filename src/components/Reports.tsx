@@ -22,6 +22,37 @@ interface DateFilterType {
   endDate?: string;
 }
 
+// Helper function to expand movements for display
+const expandMovementsForDisplay = (movements: GoodsMovement[]) => {
+  return movements.flatMap((movement) => {
+    if (movement.item === 'both') {
+      const expandedMovements = [];
+      
+      // Create shirt row if shirt bundles exist
+      if (movement.shirt_bundles && movement.shirt_bundles > 0) {
+        expandedMovements.push({
+          ...movement,
+          item: 'shirt' as const,
+          bundles_count: movement.shirt_bundles,
+        });
+      }
+      
+      // Create pant row if pant bundles exist
+      if (movement.pant_bundles && movement.pant_bundles > 0) {
+        expandedMovements.push({
+          ...movement,
+          item: 'pant' as const,
+          bundles_count: movement.pant_bundles,
+        });
+      }
+      
+      return expandedMovements;
+    } else {
+      return [movement];
+    }
+  });
+};
+
 export function Reports({ movements }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
@@ -29,7 +60,10 @@ export function Reports({ movements }: ReportsProps) {
   const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant' | 'both'>('all');
   const [dateFilter, setDateFilter] = useState<DateFilterType>({ type: 'today' });
 
-  const filteredMovements = movements.filter(movement => {
+  // Expand movements for display (split 'both' items into separate rows)
+  const expandedMovements = expandMovementsForDisplay(movements);
+
+  const filteredMovements = expandedMovements.filter(movement => {
     const matchesSearch = 
       movement.sent_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -164,33 +198,33 @@ export function Reports({ movements }: ReportsProps) {
             <DateFilter onFilterChange={setDateFilter} />
           </div>
 
-          {/* Summary Stats */}
+          {/* Summary Stats - Updated to use original movements for totals */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-blue-600 font-medium">Total Movements</div>
-              <div className="text-2xl font-bold text-blue-900">{filteredMovements.length}</div>
+              <div className="text-2xl font-bold text-blue-900">{movements.length}</div>
             </div>
             <div className="bg-green-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-green-600 font-medium">Completed</div>
               <div className="text-2xl font-bold text-green-900">
-                {filteredMovements.filter(m => m.status === 'received').length}
+                {movements.filter(m => m.status === 'received').length}
               </div>
             </div>
             <div className="bg-yellow-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-yellow-600 font-medium">Pending</div>
               <div className="text-2xl font-bold text-yellow-900">
-                {filteredMovements.filter(m => m.status === 'dispatched').length}
+                {movements.filter(m => m.status === 'dispatched').length}
               </div>
             </div>
             <div className="bg-purple-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-purple-600 font-medium">Total Bundles</div>
               <div className="text-2xl font-bold text-purple-900">
-                {filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)}
+                {movements.reduce((sum, m) => sum + m.bundles_count, 0)}
               </div>
             </div>
           </div>
 
-          {/* Movements Table */}
+          {/* Movements Table - Updated to use filtered expanded movements */}
           <div className="border rounded-lg overflow-hidden bg-white/60 backdrop-blur-sm">
             <Table>
               <TableHeader>
@@ -217,21 +251,15 @@ export function Reports({ movements }: ReportsProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredMovements.map((movement) => (
-                    <TableRow key={movement.id} className="hover:bg-gray-50/60">
+                  filteredMovements.map((movement, index) => (
+                    <TableRow key={`${movement.id}-${movement.item}-${index}`} className="hover:bg-gray-50/60">
                       <TableCell className="font-medium">
                         {formatDateTime(movement.dispatch_date)}
                       </TableCell>
                       <TableCell>
-                        {movement.item === 'both' ? (
-                          <Badge variant="outline" className="bg-white/80">
-                            {movement.item_summary_display || 'Both Items'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="capitalize bg-white/80">
-                            {movement.item}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="capitalize bg-white/80">
+                          {movement.item}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
