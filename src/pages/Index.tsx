@@ -93,24 +93,42 @@ const Index = () => {
 
   const handleDispatch = async (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Create the insert data object with proper typing
+      const insertData: any = {
+        dispatch_date: movement.dispatch_date,
+        bundles_count: movement.bundles_count,
+        item: movement.item,
+        destination: movement.destination,
+        sent_by: movement.sent_by,
+        fare_payment: movement.fare_payment,
+        accompanying_person: movement.accompanying_person,
+        auto_name: movement.auto_name,
+        status: movement.status,
+      };
+
+      // Add optional fields only if they exist
+      if (movement.shirt_bundles !== undefined) {
+        insertData.shirt_bundles = movement.shirt_bundles;
+      }
+      if (movement.pant_bundles !== undefined) {
+        insertData.pant_bundles = movement.pant_bundles;
+      }
+      if (movement.fare_display_msg) {
+        insertData.fare_display_msg = movement.fare_display_msg;
+      }
+      if (movement.fare_payee_tag) {
+        insertData.fare_payee_tag = movement.fare_payee_tag;
+      }
+      if (movement.item_summary_display) {
+        insertData.item_summary_display = movement.item_summary_display;
+      }
+      if (movement.condition_notes) {
+        insertData.condition_notes = movement.condition_notes;
+      }
+
       const { data, error } = await supabase
         .from('goods_movements')
-        .insert([{
-          dispatch_date: movement.dispatch_date,
-          bundles_count: movement.bundles_count,
-          item: movement.item,
-          shirt_bundles: movement.shirt_bundles || null,
-          pant_bundles: movement.pant_bundles || null,
-          destination: movement.destination,
-          sent_by: movement.sent_by,
-          fare_payment: movement.fare_payment,
-          fare_display_msg: movement.fare_display_msg || null,
-          fare_payee_tag: movement.fare_payee_tag || null,
-          item_summary_display: movement.item_summary_display || null,
-          accompanying_person: movement.accompanying_person,
-          auto_name: movement.auto_name,
-          status: movement.status,
-        }])
+        .insert([insertData])
         .select()
         .single();
 

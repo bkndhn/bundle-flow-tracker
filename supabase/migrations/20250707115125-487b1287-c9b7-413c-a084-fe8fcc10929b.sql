@@ -1,4 +1,5 @@
 
+
 -- Update the fare_payment_type enum to include the new options
 ALTER TYPE fare_payment_type ADD VALUE 'to_be_paid_by_small_shop';
 ALTER TYPE fare_payment_type ADD VALUE 'to_be_paid_by_big_shop';
@@ -20,3 +21,11 @@ ALTER TABLE goods_movements RENAME COLUMN fare_payment_new TO fare_payment;
 
 -- Make the column not null
 ALTER TABLE goods_movements ALTER COLUMN fare_payment SET NOT NULL;
+
+-- Add the missing columns that were referenced in the code
+ALTER TABLE goods_movements ADD COLUMN IF NOT EXISTS shirt_bundles INTEGER;
+ALTER TABLE goods_movements ADD COLUMN IF NOT EXISTS pant_bundles INTEGER;
+ALTER TABLE goods_movements ADD COLUMN IF NOT EXISTS fare_display_msg TEXT;
+ALTER TABLE goods_movements ADD COLUMN IF NOT EXISTS fare_payee_tag TEXT;
+ALTER TABLE goods_movements ADD COLUMN IF NOT EXISTS item_summary_display TEXT;
+
