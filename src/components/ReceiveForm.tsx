@@ -93,9 +93,15 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                       <span className="text-sm font-medium">
                         {movement.bundles_count} bundles
                       </span>
-                      <Badge variant="outline" className="capitalize bg-white/60">
-                        {movement.item}
-                      </Badge>
+                      {movement.item === 'both' ? (
+                        <Badge variant="outline" className="bg-white/60">
+                          {movement.item_summary_display || 'Both Items'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="capitalize bg-white/60">
+                          {movement.item}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600">
                       To {LOCATIONS[movement.destination]}
@@ -111,6 +117,16 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                     {movement.accompanying_person && (
                       <p className="text-xs text-blue-600">
                         Accompanied by: {movement.accompanying_person}
+                      </p>
+                    )}
+                    {movement.fare_display_msg && (
+                      <p className="text-xs text-purple-600">
+                        {movement.fare_display_msg}
+                      </p>
+                    )}
+                    {movement.condition_notes && (
+                      <p className="text-xs text-gray-600">
+                        Notes: {movement.condition_notes}
                       </p>
                     )}
                   </div>
@@ -147,7 +163,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
               <div className="bg-gray-50/60 p-4 rounded-md space-y-2 backdrop-blur-sm">
                 <h3 className="font-medium text-gray-900">Movement Details</h3>
                 <p className="text-sm text-gray-700">
-                  <strong>Item:</strong> <span className="capitalize">{movement.item}</span>
+                  <strong>Item:</strong> {movement.item === 'both' ? movement.item_summary_display : <span className="capitalize">{movement.item}</span>}
                 </p>
                 <p className="text-sm text-gray-700">
                   <strong>Bundles:</strong> {movement.bundles_count}
@@ -162,8 +178,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   <strong>Sent by:</strong> {movement.sent_by_name}
                 </p>
                 <p className="text-sm text-gray-700">
-                  <strong>Fare:</strong> {movement.fare_payment === 'paid_by_sender' ? 'Paid by Sender' : 'To Be Paid by Receiver'}
+                  <strong>Fare:</strong> {movement.fare_display_msg || 'Not specified'}
                 </p>
+                {movement.condition_notes && (
+                  <p className="text-sm text-gray-700">
+                    <strong>Notes:</strong> {movement.condition_notes}
+                  </p>
+                )}
               </div>
 
               {/* Received By */}

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Staff, GoodsMovement } from '@/types';
+import { FARE_PAYMENT_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { DestinationSelector } from './dispatch/DestinationSelector';
 import { ItemSelector } from './dispatch/ItemSelector';
@@ -53,6 +54,41 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
 
   const godownStaff = staff.filter(s => s.location === 'godown');
   const showBothDialog = formData.destination === 'both';
+
+  const generateFareDisplayMsg = (farePayment: string) => {
+    switch (farePayment) {
+      case 'paid_by_sender':
+        return 'Fare: Paid by Sender';
+      case 'to_be_paid_by_small_shop':
+        return 'Fare to be paid by Small Shop';
+      case 'to_be_paid_by_big_shop':
+        return 'Fare to be paid by Big Shop';
+      default:
+        return '';
+    }
+  };
+
+  const generateFarePayeeTag = (farePayment: string) => {
+    switch (farePayment) {
+      case 'paid_by_sender':
+        return 'Sender';
+      case 'to_be_paid_by_small_shop':
+        return 'Small Shop';
+      case 'to_be_paid_by_big_shop':
+        return 'Big Shop';
+      default:
+        return '';
+    }
+  };
+
+  const generateItemSummaryDisplay = (item: string, shirtBundles: string, pantBundles: string, totalBundles: number) => {
+    if (item === 'both') {
+      const shirtCount = parseInt(shirtBundles) || 0;
+      const pantCount = parseInt(pantBundles) || 0;
+      return `Shirt - ${shirtCount}, Pant - ${pantCount}, Total - ${totalBundles}`;
+    }
+    return '';
+  };
 
   const handleDestinationChange = (value: string) => {
     setFormData({ 
@@ -112,16 +148,18 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       } else {
         // Handle single destination
         if (formData.item === 'both') {
-          // Create separate records for shirt and pant
-          const shirtCount = parseInt(formData.shirt_bundles);
-          const pantCount = parseInt(formData.pant_bundles);
+          // Create single record for both items
+          const shirtCount = parseInt(formData.shirt_bundles) || 0;
+          const pantCount = parseInt(formData.pant_bundles) || 0;
+          const totalBundles = shirtCount + pantCount;
           
-          if (shirtCount > 0) {
-            onDispatch(createMovement(formData.destination as 'big_shop' | 'small_shop', 'shirt', formData.shirt_bundles));
+          if (totalBundles === 0) {
+            toast.error('Please enter bundle counts');
+            return;
           }
-          if (pantCount > 0) {
-            onDispatch(createMovement(formData.destination as 'big_shop' | 'small_shop', 'pant', formData.pant_bundles));
-          }
+
+          const movement = createMovementForBothItems(formData.destination as 'big_shop' | 'small_shop', totalBundles);
+          onDispatch(movement);
         } else {
           // Single item dispatch
           if (!formData.bundles_count) {
@@ -172,7 +210,38 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       destination: dest,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
-      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_receiver',
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      accompanying_person: formData.accompanying_person,
+      auto_name: formData.auto_name,
+      status: 'dispatched',
+      condition_notes: formData.notes || undefined,
+    };
+  };
+
+  const createMovementForBothItems = (dest: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    const shirtCount = parseInt(formData.shirt_bundles) || 0;
+    const pantCount = parseInt(formData.pant_bundles) || 0;
+    
+    return {
+      dispatch_date: new Date().toISOString(),
+      bundles_count: totalBundles,
+      item: 'both',
+      shirt_bundles: shirtCount,
+      pant_bundles: pantCount,
+      item_summary_display: generateItemSummaryDisplay('both', formData.shirt_bundles, formData.pant_bundles, totalBundles),
+      destination: dest,
+      sent_by: formData.sent_by,
+      sent_by_name: selectedStaff?.name,
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
       accompanying_person: formData.accompanying_person,
       auto_name: formData.auto_name,
       status: 'dispatched',
@@ -253,7 +322,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               </Select>
             </div>
 
-            {/* 6. Auto Fare Payment */}
+            {/* 6. Auto Fare Payment - Updated with 3 options */}
             <div className="space-y-3">
               <Label className="text-gray-700">Auto Fare Payment</Label>
               <RadioGroup
@@ -268,9 +337,15 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="to_be_paid_by_receiver" id="paid_receiver" />
-                  <Label htmlFor="paid_receiver" className="text-gray-700 text-sm">
-                    To Be Paid by Receiver
+                  <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
+                  <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">
+                    To Be Paid by Small Shop
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
+                  <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">
+                    To Be Paid by Big Shop
                   </Label>
                 </div>
               </RadioGroup>

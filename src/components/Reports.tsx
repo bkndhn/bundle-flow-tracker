@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Download, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear, parseISO, isWithinInterval } from 'date-fns';
+import { DateFilter } from './reports/DateFilter';
 
 interface ReportsProps {
   movements: GoodsMovement[];
@@ -19,7 +20,8 @@ export function Reports({ movements }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
-  const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant'>('all');
+  const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant' | 'both'>('all');
+  const [dateFilter, setDateFilter] = useState({ type: 'today' });
 
   const filteredMovements = movements.filter(movement => {
     const matchesSearch = 
@@ -27,13 +29,44 @@ export function Reports({ movements }: ReportsProps) {
       movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.accompanying_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.auto_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.destination.toLowerCase().includes(searchTerm.toLowerCase());
+      movement.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.condition_notes?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
     const matchesLocation = locationFilter === 'all' || movement.destination === locationFilter;
     const matchesItem = itemFilter === 'all' || movement.item === itemFilter;
     
-    return matchesSearch && matchesStatus && matchesLocation && matchesItem;
+    // Date filtering
+    const movementDate = parseISO(movement.dispatch_date);
+    let matchesDate = true;
+    
+    switch (dateFilter.type) {
+      case 'today':
+        matchesDate = isToday(movementDate);
+        break;
+      case 'yesterday':
+        matchesDate = isYesterday(movementDate);
+        break;
+      case 'this_week':
+        matchesDate = isThisWeek(movementDate);
+        break;
+      case 'this_month':
+        matchesDate = isThisMonth(movementDate);
+        break;
+      case 'this_year':
+        matchesDate = isThisYear(movementDate);
+        break;
+      case 'custom':
+        if (dateFilter.startDate && dateFilter.endDate) {
+          matchesDate = isWithinInterval(movementDate, {
+            start: parseISO(dateFilter.startDate),
+            end: parseISO(dateFilter.endDate)
+          });
+        }
+        break;
+    }
+    
+    return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate;
   });
 
   const formatDateTime = (dateString: string) => {
@@ -109,6 +142,7 @@ export function Reports({ movements }: ReportsProps) {
                   <SelectItem value="all">All Items</SelectItem>
                   <SelectItem value="shirt">Shirt</SelectItem>
                   <SelectItem value="pant">Pant</SelectItem>
+                  <SelectItem value="both">Both</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -117,6 +151,11 @@ export function Reports({ movements }: ReportsProps) {
                 Export
               </Button>
             </div>
+          </div>
+
+          {/* Date Filter */}
+          <div className="mb-6">
+            <DateFilter onFilterChange={setDateFilter} />
           </div>
 
           {/* Summary Stats */}
@@ -178,7 +217,15 @@ export function Reports({ movements }: ReportsProps) {
                         {formatDateTime(movement.dispatch_date)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize bg-white/80">{movement.item}</Badge>
+                        {movement.item === 'both' ? (
+                          <Badge variant="outline" className="bg-white/80">
+                            {movement.item_summary_display || 'Both Items'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="capitalize bg-white/80">
+                            {movement.item}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
@@ -200,12 +247,8 @@ export function Reports({ movements }: ReportsProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          movement.fare_payment === 'paid_by_sender' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-orange-100 text-orange-800'
-                        }`}>
-                          {FARE_PAYMENT_OPTIONS[movement.fare_payment]}
+                        <span className="text-xs">
+                          {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
                         </span>
                       </TableCell>
                       <TableCell>

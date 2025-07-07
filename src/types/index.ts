@@ -12,11 +12,16 @@ export interface GoodsMovement {
   id: string;
   dispatch_date: string;
   bundles_count: number;
-  item: 'shirt' | 'pant';
+  item: 'shirt' | 'pant' | 'both';
+  shirt_bundles?: number;
+  pant_bundles?: number;
   destination: 'big_shop' | 'small_shop';
   sent_by: string;
   sent_by_name?: string;
-  fare_payment: 'paid_by_sender' | 'to_be_paid_by_receiver';
+  fare_payment: 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop';
+  fare_display_msg?: string;
+  fare_payee_tag?: string;
+  item_summary_display?: string;
   accompanying_person: string;
   auto_name: string;
   received_at?: string;
