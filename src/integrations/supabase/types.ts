@@ -47,12 +47,17 @@ export type Database = {
           created_at: string | null
           destination: Database["public"]["Enums"]["destination_type"]
           dispatch_date: string
+          fare_display_msg: string | null
+          fare_payee_tag: string | null
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id: string
           item: string
+          item_summary_display: string | null
+          pant_bundles: number | null
           received_at: string | null
           received_by: string | null
           sent_by: string
+          shirt_bundles: number | null
           status: Database["public"]["Enums"]["movement_status"]
           updated_at: string | null
         }
@@ -64,12 +69,17 @@ export type Database = {
           created_at?: string | null
           destination: Database["public"]["Enums"]["destination_type"]
           dispatch_date: string
+          fare_display_msg?: string | null
+          fare_payee_tag?: string | null
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
           item?: string
+          item_summary_display?: string | null
+          pant_bundles?: number | null
           received_at?: string | null
           received_by?: string | null
           sent_by: string
+          shirt_bundles?: number | null
           status?: Database["public"]["Enums"]["movement_status"]
           updated_at?: string | null
         }
@@ -81,12 +91,17 @@ export type Database = {
           created_at?: string | null
           destination?: Database["public"]["Enums"]["destination_type"]
           dispatch_date?: string
+          fare_display_msg?: string | null
+          fare_payee_tag?: string | null
           fare_payment?: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
           item?: string
+          item_summary_display?: string | null
+          pant_bundles?: number | null
           received_at?: string | null
           received_by?: string | null
           sent_by?: string
+          shirt_bundles?: number | null
           status?: Database["public"]["Enums"]["movement_status"]
           updated_at?: string | null
         }
@@ -143,7 +158,11 @@ export type Database = {
     }
     Enums: {
       destination_type: "big_shop" | "small_shop"
-      fare_payment_type: "paid_by_sender" | "to_be_paid_by_receiver"
+      fare_payment_type:
+        | "paid_by_sender"
+        | "to_be_paid_by_receiver"
+        | "to_be_paid_by_small_shop"
+        | "to_be_paid_by_big_shop"
       location_type: "godown" | "big_shop" | "small_shop"
       movement_status: "dispatched" | "received"
       staff_role: "godown_staff" | "shop_staff" | "admin"
@@ -275,7 +294,12 @@ export const Constants = {
   public: {
     Enums: {
       destination_type: ["big_shop", "small_shop"],
-      fare_payment_type: ["paid_by_sender", "to_be_paid_by_receiver"],
+      fare_payment_type: [
+        "paid_by_sender",
+        "to_be_paid_by_receiver",
+        "to_be_paid_by_small_shop",
+        "to_be_paid_by_big_shop",
+      ],
       location_type: ["godown", "big_shop", "small_shop"],
       movement_status: ["dispatched", "received"],
       staff_role: ["godown_staff", "shop_staff", "admin"],
