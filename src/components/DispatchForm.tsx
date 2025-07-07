@@ -111,29 +111,67 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     });
   };
 
+  const createBaseMovement = (destination: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    const selectedStaff = staff.find(s => s.id === formData.sent_by);
+
+    return {
+      dispatch_date: new Date().toISOString(),
+      bundles_count: totalBundles,
+      item: 'shirt',
+      destination,
+      sent_by: formData.sent_by,
+      sent_by_name: selectedStaff?.name,
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      accompanying_person: formData.accompanying_person,
+      auto_name: formData.auto_name,
+      status: 'dispatched',
+      condition_notes: formData.notes || undefined,
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       if (formData.destination === 'both') {
-        // Handle "Both" destination - create separate records
+        // Handle "Both" destination - create one record per destination
         const movements = [];
-        
-        // Big Shop movements
-        if (parseInt(bothDestinationData.big_shop.shirt) > 0) {
-          movements.push(createMovement('big_shop', 'shirt', bothDestinationData.big_shop.shirt));
+
+        // Big Shop - single record with both items
+        const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
+        const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
+        const bigTotal = bigShirt + bigPant;
+
+        if (bigTotal > 0) {
+          movements.push({
+            ...createBaseMovement('big_shop', bigTotal),
+            item: 'both',
+            shirt_bundles: bigShirt,
+            pant_bundles: bigPant,
+            item_summary_display: generateItemSummaryDisplay('both', String(bigShirt), String(bigPant), bigTotal),
+          });
         }
-        if (parseInt(bothDestinationData.big_shop.pant) > 0) {
-          movements.push(createMovement('big_shop', 'pant', bothDestinationData.big_shop.pant));
-        }
-        
-        // Small Shop movements
-        if (parseInt(bothDestinationData.small_shop.shirt) > 0) {
-          movements.push(createMovement('small_shop', 'shirt', bothDestinationData.small_shop.shirt));
-        }
-        if (parseInt(bothDestinationData.small_shop.pant) > 0) {
-          movements.push(createMovement('small_shop', 'pant', bothDestinationData.small_shop.pant));
+
+        // Small Shop - single record with both items
+        const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
+        const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
+        const smallTotal = smallShirt + smallPant;
+
+        if (smallTotal > 0) {
+          movements.push({
+            ...createBaseMovement('small_shop', smallTotal),
+            item: 'both',
+            shirt_bundles: smallShirt,
+            pant_bundles: smallPant,
+            item_summary_display: generateItemSummaryDisplay('both', String(smallShirt), String(smallPant), smallTotal),
+          });
         }
 
         if (movements.length === 0) {
@@ -322,7 +360,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               </Select>
             </div>
 
-            {/* 6. Auto Fare Payment - Updated with 3 options */}
             <div className="space-y-3">
               <Label className="text-gray-700">Auto Fare Payment</Label>
               <RadioGroup
@@ -351,7 +388,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               </RadioGroup>
             </div>
 
-            {/* 7. Person Accompanying Auto */}
             <div className="space-y-2">
               <Label htmlFor="accompanying" className="text-gray-700">Person Accompanying Auto *</Label>
               <Input
@@ -364,7 +400,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               />
             </div>
 
-            {/* 8. Auto Name */}
             <div className="space-y-2">
               <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
               <Input
@@ -377,7 +412,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               />
             </div>
 
-            {/* 9. Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-gray-700">Notes (Optional)</Label>
               <Textarea
