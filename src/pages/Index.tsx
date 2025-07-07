@@ -56,7 +56,7 @@ const Index = () => {
         console.error('Error loading movements:', movementsError);
         toast.error('Failed to load movement data');
       } else {
-        // Transform the data to match our interface
+        // Transform the data to match our interface with proper type handling
         const transformedMovements: GoodsMovement[] = movementsData?.map(movement => ({
           id: movement.id,
           dispatch_date: movement.dispatch_date,
@@ -66,7 +66,7 @@ const Index = () => {
           pant_bundles: movement.pant_bundles || undefined,
           destination: movement.destination,
           sent_by: movement.sent_by,
-          sent_by_name: movement.sent_by_staff?.name || '',
+          sent_by_name: (movement.sent_by_staff as any)?.name || '',
           fare_payment: movement.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
           fare_display_msg: movement.fare_display_msg || undefined,
           fare_payee_tag: movement.fare_payee_tag || undefined,
@@ -75,7 +75,7 @@ const Index = () => {
           auto_name: movement.auto_name,
           received_at: movement.received_at || undefined,
           received_by: movement.received_by || undefined,
-          received_by_name: movement.received_by_staff?.name || '',
+          received_by_name: (movement.received_by_staff as any)?.name || '',
           condition_notes: movement.condition_notes || undefined,
           status: movement.status,
           created_at: movement.created_at || '',
@@ -93,6 +93,8 @@ const Index = () => {
 
   const handleDispatch = async (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('Dispatching movement:', movement);
+      
       // Create the insert data object with proper typing
       const insertData: any = {
         dispatch_date: movement.dispatch_date,
@@ -126,6 +128,8 @@ const Index = () => {
         insertData.condition_notes = movement.condition_notes;
       }
 
+      console.log('Insert data:', insertData);
+
       const { data, error } = await supabase
         .from('goods_movements')
         .insert([insertData])
@@ -134,8 +138,9 @@ const Index = () => {
 
       if (error) {
         console.error('Error dispatching goods:', error);
-        toast.error('Failed to dispatch goods');
+        toast.error('Failed to dispatch goods: ' + error.message);
       } else {
+        console.log('Dispatch successful:', data);
         toast.success('Goods dispatched successfully!');
         loadData(); // Refresh data after successful dispatch
       }
