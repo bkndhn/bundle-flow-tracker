@@ -9,6 +9,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Staff, GoodsMovement } from '@/types';
 import { toast } from 'sonner';
+import { DestinationSelector } from './dispatch/DestinationSelector';
+import { ItemSelector } from './dispatch/ItemSelector';
+import { BundleInputs } from './dispatch/BundleInputs';
+import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
 
 interface DispatchFormProps {
   staff: Staff[];
@@ -45,10 +49,10 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     small_shop: { shirt: '', pant: '' }
   });
 
-  const [showBothDialog, setShowBothDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const godownStaff = staff.filter(s => s.location === 'godown');
+  const showBothDialog = formData.destination === 'both';
 
   const handleDestinationChange = (value: string) => {
     setFormData({ 
@@ -59,7 +63,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       shirt_bundles: '',
       pant_bundles: ''
     });
-    setShowBothDialog(value === 'both');
   };
 
   const handleItemChange = (value: string) => {
@@ -70,15 +73,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       shirt_bundles: '',
       pant_bundles: ''
     });
-  };
-
-  const calculateTotalBundles = () => {
-    if (formData.item === 'both') {
-      const shirtCount = parseInt(formData.shirt_bundles) || 0;
-      const pantCount = parseInt(formData.pant_bundles) || 0;
-      return shirtCount + pantCount;
-    }
-    return parseInt(formData.bundles_count) || 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +149,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         big_shop: { shirt: '', pant: '' },
         small_shop: { shirt: '', pant: '' }
       });
-      setShowBothDialog(false);
 
       toast.success('Goods dispatched successfully!');
     } catch (error) {
@@ -197,7 +190,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 1. Date & Time (Auto-filled) */}
+            {/* 1. Date & Time */}
             <div className="space-y-2">
               <Label className="text-gray-700">Dispatch Date & Time</Label>
               <Input 
@@ -208,148 +201,36 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
             </div>
 
             {/* 2. Destination */}
-            <div className="space-y-2">
-              <Label className="text-gray-700">Destination *</Label>
-              <Select
-                value={formData.destination}
-                onValueChange={handleDestinationChange}
-              >
-                <SelectTrigger className="bg-white/90">
-                  <SelectValue placeholder="Select destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="small_shop">Small Shop</SelectItem>
-                  <SelectItem value="big_shop">Big Shop</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <DestinationSelector 
+              value={formData.destination}
+              onChange={handleDestinationChange}
+            />
 
             {/* 3. Item */}
-            {formData.destination && formData.destination !== 'both' && (
-              <div className="space-y-2">
-                <Label className="text-gray-700">Item *</Label>
-                <Select
-                  value={formData.item}
-                  onValueChange={handleItemChange}
-                >
-                  <SelectTrigger className="bg-white/90">
-                    <SelectValue placeholder="Select item type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="shirt">Shirt</SelectItem>
-                    <SelectItem value="pant">Pant</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <ItemSelector 
+              value={formData.item}
+              onChange={handleItemChange}
+              destination={formData.destination}
+            />
 
-            {/* 4. Number of Bundles - Conditional rendering */}
-            {formData.destination && formData.destination !== 'both' && (
-              <>
-                {formData.item === 'both' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-gray-700">Shirt Bundles *</Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter shirt bundles"
-                          value={formData.shirt_bundles}
-                          onChange={(e) => setFormData({ ...formData, shirt_bundles: e.target.value })}
-                          className="bg-white/90"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-gray-700">Pant Bundles *</Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter pant bundles"
-                          value={formData.pant_bundles}
-                          onChange={(e) => setFormData({ ...formData, pant_bundles: e.target.value })}
-                          className="bg-white/90"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-gray-700">Total Bundles</Label>
-                      <Input
-                        value={calculateTotalBundles()}
-                        disabled
-                        className="bg-gray-50/60"
-                      />
-                    </div>
-                  </div>
-                ) : formData.item && (
-                  <div className="space-y-2">
-                    <Label className="text-gray-700">Number of Bundles *</Label>
-                    <Input
-                      type="number"
-                      placeholder="Enter number of bundles"
-                      value={formData.bundles_count}
-                      onChange={(e) => setFormData({ ...formData, bundles_count: e.target.value })}
-                      className="bg-white/90"
-                    />
-                  </div>
-                )}
-              </>
-            )}
+            {/* 4. Bundle Inputs */}
+            <BundleInputs 
+              destination={formData.destination}
+              item={formData.item}
+              bundlesCount={formData.bundles_count}
+              shirtBundles={formData.shirt_bundles}
+              pantBundles={formData.pant_bundles}
+              onBundlesCountChange={(value) => setFormData({ ...formData, bundles_count: value })}
+              onShirtBundlesChange={(value) => setFormData({ ...formData, shirt_bundles: value })}
+              onPantBundlesChange={(value) => setFormData({ ...formData, pant_bundles: value })}
+            />
 
             {/* Both Destination Dialog */}
             {showBothDialog && (
-              <div className="space-y-4 p-4 border rounded-lg bg-blue-50/50">
-                <Label className="text-gray-700 font-semibold">Distribution for Both Shops</Label>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="font-medium text-center">Item</div>
-                  <div className="font-medium text-center">Big Shop</div>
-                  <div className="font-medium text-center">Small Shop</div>
-                  
-                  <div className="flex items-center">Shirt</div>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={bothDestinationData.big_shop.shirt}
-                    onChange={(e) => setBothDestinationData({
-                      ...bothDestinationData,
-                      big_shop: { ...bothDestinationData.big_shop, shirt: e.target.value }
-                    })}
-                    className="bg-white/90"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={bothDestinationData.small_shop.shirt}
-                    onChange={(e) => setBothDestinationData({
-                      ...bothDestinationData,
-                      small_shop: { ...bothDestinationData.small_shop, shirt: e.target.value }
-                    })}
-                    className="bg-white/90"
-                  />
-                  
-                  <div className="flex items-center">Pant</div>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={bothDestinationData.big_shop.pant}
-                    onChange={(e) => setBothDestinationData({
-                      ...bothDestinationData,
-                      big_shop: { ...bothDestinationData.big_shop, pant: e.target.value }
-                    })}
-                    className="bg-white/90"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={bothDestinationData.small_shop.pant}
-                    onChange={(e) => setBothDestinationData({
-                      ...bothDestinationData,
-                      small_shop: { ...bothDestinationData.small_shop, pant: e.target.value }
-                    })}
-                    className="bg-white/90"
-                  />
-                </div>
-              </div>
+              <BothDestinationDialog 
+                data={bothDestinationData}
+                onChange={setBothDestinationData}
+              />
             )}
 
             {/* 5. Sent By */}

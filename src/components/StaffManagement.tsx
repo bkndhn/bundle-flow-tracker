@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Staff } from '@/types';
-import { LOCATIONS, ROLES } from '@/lib/constants';
+import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 
@@ -25,12 +25,10 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [addFormData, setAddFormData] = useState({
     name: '',
-    role: '',
     location: '',
   });
   const [editFormData, setEditFormData] = useState({
     name: '',
-    role: '',
     location: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,14 +38,14 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
     setIsSubmitting(true);
 
     try {
-      if (!addFormData.name || !addFormData.role || !addFormData.location) {
+      if (!addFormData.name || !addFormData.location) {
         toast.error('Please fill in all fields');
         return;
       }
 
       const newStaff: Omit<Staff, 'id' | 'created_at'> = {
         name: addFormData.name,
-        role: addFormData.role as Staff['role'],
+        role: addFormData.location === 'godown' ? 'godown_staff' : 'shop_staff',
         location: addFormData.location as Staff['location'],
       };
 
@@ -56,7 +54,6 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
       // Reset form
       setAddFormData({
         name: '',
-        role: '',
         location: '',
       });
       setShowAddForm(false);
@@ -74,14 +71,14 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
     setIsSubmitting(true);
 
     try {
-      if (!editFormData.name || !editFormData.role || !editFormData.location) {
+      if (!editFormData.name || !editFormData.location) {
         toast.error('Please fill in all fields');
         return;
       }
 
       const updatedStaff: Omit<Staff, 'id' | 'created_at'> = {
         name: editFormData.name,
-        role: editFormData.role as Staff['role'],
+        role: editFormData.location === 'godown' ? 'godown_staff' : 'shop_staff',
         location: editFormData.location as Staff['location'],
       };
 
@@ -98,7 +95,6 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
     setEditingStaff(member);
     setEditFormData({
       name: member.name,
-      role: member.role,
       location: member.location,
     });
   };
@@ -108,15 +104,6 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
       await onDeleteStaff(id);
     } catch (error) {
       toast.error('Failed to delete staff member');
-    }
-  };
-
-  const getRoleBadgeVariant = (role: Staff['role']) => {
-    switch (role) {
-      case 'admin': return 'default';
-      case 'godown_staff': return 'secondary';
-      case 'shop_staff': return 'outline';
-      default: return 'secondary';
     }
   };
 
@@ -155,23 +142,6 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                   onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Role *</Label>
-                <Select
-                  value={addFormData.role}
-                  onValueChange={(value) => setAddFormData({ ...addFormData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="godown_staff">Godown Staff</SelectItem>
-                    <SelectItem value="shop_staff">Shop Staff</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -223,8 +193,8 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                   <p className="text-sm text-gray-600">{LOCATIONS[member.location]}</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant={getRoleBadgeVariant(member.role)}>
-                    {ROLES[member.role]}
+                  <Badge variant="secondary">
+                    {LOCATIONS[member.location]}
                   </Badge>
                   
                   {/* Edit Button */}
@@ -252,23 +222,6 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                             required
                           />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Role *</Label>
-                          <Select
-                            value={editFormData.role}
-                            onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="godown_staff">Godown Staff</SelectItem>
-                              <SelectItem value="shop_staff">Shop Staff</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </div>
 
                         <div className="space-y-2">
