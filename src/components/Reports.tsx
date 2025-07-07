@@ -16,12 +16,18 @@ interface ReportsProps {
   movements: GoodsMovement[];
 }
 
+interface DateFilterType {
+  type: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export function Reports({ movements }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
   const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant' | 'both'>('all');
-  const [dateFilter, setDateFilter] = useState({ type: 'today' });
+  const [dateFilter, setDateFilter] = useState<DateFilterType>({ type: 'today' });
 
   const filteredMovements = movements.filter(movement => {
     const matchesSearch = 

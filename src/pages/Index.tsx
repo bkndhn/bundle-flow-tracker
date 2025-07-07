@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
@@ -62,11 +61,16 @@ const Index = () => {
           id: movement.id,
           dispatch_date: movement.dispatch_date,
           bundles_count: movement.bundles_count,
-          item: movement.item as 'shirt' | 'pant',
+          item: movement.item as 'shirt' | 'pant' | 'both',
+          shirt_bundles: movement.shirt_bundles || undefined,
+          pant_bundles: movement.pant_bundles || undefined,
           destination: movement.destination,
           sent_by: movement.sent_by,
           sent_by_name: movement.sent_by_staff?.name || '',
-          fare_payment: movement.fare_payment,
+          fare_payment: movement.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+          fare_display_msg: movement.fare_display_msg || undefined,
+          fare_payee_tag: movement.fare_payee_tag || undefined,
+          item_summary_display: movement.item_summary_display || undefined,
           accompanying_person: movement.accompanying_person || '',
           auto_name: movement.auto_name,
           received_at: movement.received_at || undefined,
@@ -95,9 +99,14 @@ const Index = () => {
           dispatch_date: movement.dispatch_date,
           bundles_count: movement.bundles_count,
           item: movement.item,
+          shirt_bundles: movement.shirt_bundles || null,
+          pant_bundles: movement.pant_bundles || null,
           destination: movement.destination,
           sent_by: movement.sent_by,
           fare_payment: movement.fare_payment,
+          fare_display_msg: movement.fare_display_msg || null,
+          fare_payee_tag: movement.fare_payee_tag || null,
+          item_summary_display: movement.item_summary_display || null,
           accompanying_person: movement.accompanying_person,
           auto_name: movement.auto_name,
           status: movement.status,
