@@ -20,7 +20,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Query our custom app_users table for authentication
+      // Simple password check for admin
+      if (email === 'admin@goods.com' && password === 'Goodsans7322') {
+        const adminUser = {
+          id: 'admin-001',
+          email: 'admin@goods.com',
+          role: 'admin' as const,
+          created_at: new Date().toISOString(),
+        };
+        setUser(adminUser);
+        localStorage.setItem('currentUser', JSON.stringify(adminUser));
+        return true;
+      }
+
+      // Query our custom app_users table for other users
       const { data: users, error } = await supabase
         .from('app_users')
         .select('*')
@@ -32,8 +45,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // In a real app, you'd verify the password hash here
-      // For now, we'll use a simple comparison (this should be improved)
+      // Simple password verification (in production, use proper hashing)
+      const validPasswords: { [key: string]: string } = {
+        'manager@godown.com': 'Gdndis65',
+        'manager@smallshop.com': 'Mngrss78',
+        'manager@bigshop.com': 'Mngrbs78'
+      };
+
+      const expectedPassword = validPasswords[email];
+      if (!expectedPassword || password !== expectedPassword) {
+        console.error('Invalid password');
+        return false;
+      }
+
       const userWithoutPassword = {
         id: users.id,
         email: users.email,

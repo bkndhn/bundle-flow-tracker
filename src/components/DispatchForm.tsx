@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,9 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         status: movement.status,
         created_at: movement.created_at || '',
         updated_at: movement.updated_at || '',
+        last_edited_at: movement.last_edited_at || undefined,
+        last_edited_by: movement.last_edited_by || undefined,
+        is_editable: movement.is_editable || true,
       })) || [];
       
       setMovements(transformedMovements);
@@ -86,7 +90,11 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     try {
       const { error } = await supabase
         .from('goods_movements')
-        .update(updates)
+        .update({
+          ...updates,
+          last_edited_at: new Date().toISOString(),
+          last_edited_by: 'admin@goods.com'
+        })
         .eq('id', movementId);
       
       if (error) throw error;
@@ -153,6 +161,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     return {
       dispatch_date: new Date().toISOString(),
       bundles_count: totalBundles,
+      item: 'both',
       destination,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
@@ -293,24 +302,37 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <ItemSelector
-              selectedItem={formData.item}
-              onItemChange={(item) => setFormData({ ...formData, item })}
-            />
+            {/* 1. Dispatch Date & Time - Auto generated, display only */}
+            <div className="space-y-2">
+              <Label className="text-gray-700">Dispatch Date & Time</Label>
+              <Input
+                value={new Date().toLocaleString()}
+                disabled
+                className="bg-gray-50/60"
+              />
+            </div>
 
+            {/* 2. Destination */}
             <DestinationSelector
               selectedDestination={formData.destination}
               onDestinationChange={(destination) => setFormData({ ...formData, destination })}
             />
 
+            {/* 3. Item */}
+            <ItemSelector
+              selectedItem={formData.item}
+              onItemChange={(item) => setFormData({ ...formData, item })}
+            />
+
+            {/* 4. Number of Bundles */}
             {formData.destination !== 'both' && (
               <BundleInputs
-                bundleCount={formData.bundles_count}
-                onBundleCountChange={(bundles_count) => setFormData({ ...formData, bundles_count })}
+                bundlesCount={formData.bundles_count}
+                onBundlesCountChange={(bundles_count) => setFormData({ ...formData, bundles_count })}
               />
             )}
 
-            {/* Sent By */}
+            {/* 5. Sent By */}
             <div className="space-y-2">
               <Label>Sent By *</Label>
               <Select
@@ -330,9 +352,9 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               </Select>
             </div>
 
-            {/* Fare Payment */}
+            {/* 6. Auto Fare Payment */}
             <div className="space-y-2">
-              <Label>Fare Payment *</Label>
+              <Label>Auto Fare Payment *</Label>
               <Select
                 value={formData.fare_payment}
                 onValueChange={(value) => setFormData({ ...formData, fare_payment: value as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop' })}
@@ -348,7 +370,19 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               </Select>
             </div>
 
-            {/* Auto Name */}
+            {/* 7. Person Accompanying Auto */}
+            <div className="space-y-2">
+              <Label htmlFor="person">Person Accompanying Auto (Optional)</Label>
+              <Input
+                id="person"
+                placeholder="Enter accompanying person name"
+                value={formData.accompanying_person}
+                onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
+                className="bg-white/80"
+              />
+            </div>
+
+            {/* 8. Auto Name */}
             <div className="space-y-2">
               <Label htmlFor="auto">Auto Name *</Label>
               <Input
@@ -361,19 +395,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               />
             </div>
 
-            {/* Accompanying Person */}
-            <div className="space-y-2">
-              <Label htmlFor="person">Accompanying Person (Optional)</Label>
-              <Input
-                id="person"
-                placeholder="Enter accompanying person name"
-                value={formData.accompanying_person}
-                onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
-                className="bg-white/80"
-              />
-            </div>
-
-            {/* Notes */}
+            {/* 9. Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea

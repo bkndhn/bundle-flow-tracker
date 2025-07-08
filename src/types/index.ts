@@ -31,6 +31,9 @@ export interface GoodsMovement {
   status: 'dispatched' | 'received';
   created_at: string;
   updated_at: string;
+  last_edited_at?: string;
+  last_edited_by?: string;
+  is_editable?: boolean;
 }
 
 export interface MovementSummary {
