@@ -15,7 +15,7 @@ export interface GoodsMovement {
   item: 'shirt' | 'pant' | 'both';
   shirt_bundles?: number;
   pant_bundles?: number;
-  destination: 'big_shop' | 'small_shop';
+  destination: 'big_shop' | 'small_shop' | 'both';
   sent_by: string;
   sent_by_name?: string;
   fare_payment: 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop';

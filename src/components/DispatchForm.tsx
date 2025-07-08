@@ -59,7 +59,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         item: movement.item as 'shirt' | 'pant' | 'both',
         shirt_bundles: movement.shirt_bundles || undefined,
         pant_bundles: movement.pant_bundles || undefined,
-        destination: movement.destination,
+        destination: movement.destination as 'big_shop' | 'small_shop' | 'both',
         sent_by: movement.sent_by,
         sent_by_name: '',
         fare_payment: movement.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
@@ -77,7 +77,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         updated_at: movement.updated_at || '',
         last_edited_at: movement.last_edited_at || undefined,
         last_edited_by: movement.last_edited_by || undefined,
-        is_editable: movement.is_editable || true,
+        is_editable: movement.is_editable !== false,
       })) || [];
       
       setMovements(transformedMovements);

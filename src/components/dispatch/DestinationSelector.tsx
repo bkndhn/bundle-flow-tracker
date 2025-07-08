@@ -16,8 +16,8 @@ export function DestinationSelector({ selectedDestination, onDestinationChange }
           <SelectValue placeholder="Select destination" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="small_shop">Small Shop</SelectItem>
           <SelectItem value="big_shop">Big Shop</SelectItem>
+          <SelectItem value="small_shop">Small Shop</SelectItem>
           <SelectItem value="both">Both</SelectItem>
         </SelectContent>
       </Select>
