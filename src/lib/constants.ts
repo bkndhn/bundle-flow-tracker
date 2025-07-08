@@ -30,3 +30,9 @@ export const DATE_FILTER_OPTIONS = {
   this_year: 'This Year',
   custom: 'Custom Date Range'
 } as const;
+
+export const DispatchDestination = {
+  GODOWN: "godown",
+  OUTSTATION: "outstation",
+  BOTH: "both"
+} as const;
