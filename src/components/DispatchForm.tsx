@@ -27,6 +27,8 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     item: 'shirt' as 'shirt' | 'pant' | 'both',
     destination: 'big_shop' as 'big_shop' | 'small_shop' | 'both',
     bundles_count: '',
+    shirt_bundles: '',
+    pant_bundles: '',
     sent_by: '',
     fare_payment: 'paid_by_sender' as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
     accompanying_person: '',
@@ -75,9 +77,9 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         status: movement.status,
         created_at: movement.created_at || '',
         updated_at: movement.updated_at || '',
-        last_edited_at: movement.last_edited_at || undefined,
-        last_edited_by: movement.last_edited_by || undefined,
-        is_editable: movement.is_editable !== false,
+        last_edited_at: '',
+        last_edited_by: '',
+        is_editable: movement.status === 'dispatched',
       })) || [];
       
       setMovements(transformedMovements);
@@ -92,8 +94,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         .from('goods_movements')
         .update({
           ...updates,
-          last_edited_at: new Date().toISOString(),
-          last_edited_by: 'admin@goods.com'
+          updated_at: new Date().toISOString()
         })
         .eq('id', movementId);
       
@@ -130,6 +131,16 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
   useEffect(() => {
     loadMovements();
   }, []);
+
+  // Auto-calculate total bundles when item is "both"
+  useEffect(() => {
+    if (formData.item === 'both' && formData.destination !== 'both') {
+      const shirtCount = parseInt(formData.shirt_bundles) || 0;
+      const pantCount = parseInt(formData.pant_bundles) || 0;
+      const total = shirtCount + pantCount;
+      setFormData(prev => ({ ...prev, bundles_count: total.toString() }));
+    }
+  }, [formData.shirt_bundles, formData.pant_bundles, formData.item, formData.destination]);
 
   const generateFareDisplayMsg = (farePayment: string) => {
     switch (farePayment) {
@@ -172,14 +183,17 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       auto_name: formData.auto_name,
       status: 'dispatched',
       condition_notes: formData.notes || undefined,
+      last_edited_at: '',
+      last_edited_by: '',
+      is_editable: true,
     };
   };
 
-  const createMovement = (destination: 'big_shop' | 'small_shop', item: 'shirt' | 'pant', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+  const createMovement = (destination: 'big_shop' | 'small_shop', item: 'shirt' | 'pant' | 'both', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
     const selectedStaff = staff.find(s => s.id === formData.sent_by);
     const bundles = parseInt(bundleCount);
 
-    return {
+    const movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> = {
       dispatch_date: new Date().toISOString(),
       bundles_count: bundles,
       item,
@@ -193,7 +207,24 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       auto_name: formData.auto_name,
       status: 'dispatched',
       condition_notes: formData.notes || undefined,
+      last_edited_at: '',
+      last_edited_by: '',
+      is_editable: true,
     };
+
+    // Add shirt and pant bundles if item is "both"
+    if (item === 'both') {
+      movement.shirt_bundles = parseInt(formData.shirt_bundles) || 0;
+      movement.pant_bundles = parseInt(formData.pant_bundles) || 0;
+      movement.item_summary_display = generateItemSummaryDisplay(
+        item, 
+        formData.shirt_bundles, 
+        formData.pant_bundles, 
+        bundles
+      );
+    }
+
+    return movement;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,12 +240,21 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       return;
     }
 
-    if (!formData.bundles_count || parseInt(formData.bundles_count) <= 0) {
-      toast.error('Please enter a valid bundle count');
-      return;
+    // For single destination
+    if (formData.item === 'both') {
+      if (!formData.shirt_bundles && !formData.pant_bundles) {
+        toast.error('Please enter shirt and/or pant bundle counts');
+        return;
+      }
+    } else {
+      if (!formData.bundles_count || parseInt(formData.bundles_count) <= 0) {
+        toast.error('Please enter a valid bundle count');
+        return;
+      }
     }
 
-    const movement = createMovement(formData.destination, formData.item, formData.bundles_count);
+    const bundleCount = formData.item === 'both' ? formData.bundles_count : formData.bundles_count;
+    const movement = createMovement(formData.destination, formData.item, bundleCount);
     onDispatch(movement);
     
     // Reset form
@@ -222,6 +262,8 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       item: 'shirt',
       destination: 'big_shop',
       bundles_count: '',
+      shirt_bundles: '',
+      pant_bundles: '',
       sent_by: '',
       fare_payment: 'paid_by_sender',
       accompanying_person: '',
@@ -284,6 +326,8 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       item: 'shirt',
       destination: 'big_shop',
       bundles_count: '',
+      shirt_bundles: '',
+      pant_bundles: '',
       sent_by: '',
       fare_payment: 'paid_by_sender',
       accompanying_person: '',
@@ -321,15 +365,53 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
             {/* 3. Item */}
             <ItemSelector
               selectedItem={formData.item}
-              onItemChange={(item) => setFormData({ ...formData, item })}
+              onItemChange={(item) => setFormData({ ...formData, item, shirt_bundles: '', pant_bundles: '', bundles_count: '' })}
             />
 
             {/* 4. Number of Bundles */}
             {formData.destination !== 'both' && (
-              <BundleInputs
-                bundlesCount={formData.bundles_count}
-                onBundlesCountChange={(bundles_count) => setFormData({ ...formData, bundles_count })}
-              />
+              <>
+                {formData.item === 'both' ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Shirt Bundles</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter shirt bundles"
+                          value={formData.shirt_bundles}
+                          onChange={(e) => setFormData({ ...formData, shirt_bundles: e.target.value })}
+                          className="bg-white/90"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Pant Bundles</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter pant bundles"
+                          value={formData.pant_bundles}
+                          onChange={(e) => setFormData({ ...formData, pant_bundles: e.target.value })}
+                          className="bg-white/90"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-gray-700">Total Bundles (Auto-calculated)</Label>
+                      <Input
+                        type="number"
+                        value={formData.bundles_count}
+                        disabled
+                        className="bg-gray-50/60"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <BundleInputs
+                    bundlesCount={formData.bundles_count}
+                    onBundlesCountChange={(bundles_count) => setFormData({ ...formData, bundles_count })}
+                  />
+                )}
+              </>
             )}
 
             {/* 5. Sent By */}

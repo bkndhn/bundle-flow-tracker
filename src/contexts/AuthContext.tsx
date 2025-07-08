@@ -20,20 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simple password check for admin
-      if (email === 'admin@goods.com' && password === 'Goodsans7322') {
-        const adminUser = {
-          id: 'admin-001',
-          email: 'admin@goods.com',
-          role: 'admin' as const,
-          created_at: new Date().toISOString(),
-        };
-        setUser(adminUser);
-        localStorage.setItem('currentUser', JSON.stringify(adminUser));
-        return true;
-      }
-
-      // Query our custom app_users table for other users
+      // Query our custom app_users table
       const { data: users, error } = await supabase
         .from('app_users')
         .select('*')
@@ -45,15 +32,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // Simple password verification (in production, use proper hashing)
-      const validPasswords: { [key: string]: string } = {
-        'manager@godown.com': 'Gdndis65',
-        'manager@smallshop.com': 'Mngrss78',
-        'manager@bigshop.com': 'Mngrbs78'
-      };
-
-      const expectedPassword = validPasswords[email];
-      if (!expectedPassword || password !== expectedPassword) {
+      // Simple password verification using the password_hash field
+      if (password !== users.password_hash) {
         console.error('Invalid password');
         return false;
       }
@@ -62,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: users.id,
         email: users.email,
         role: users.role as 'admin' | 'godown_manager' | 'small_shop_manager' | 'big_shop_manager',
-        created_at: users.created_at,
+        created_at: users.created_at || new Date().toISOString(),
       };
 
       setUser(userWithoutPassword);
