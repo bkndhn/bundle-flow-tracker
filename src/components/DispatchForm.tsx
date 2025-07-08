@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DispatchFormData, FormErrors } from "@/types";
 import BundleInputs from "./dispatch/BundleInputs";
-import DestinationSelector from "@/components/DestinationSelector";
+import DestinationSelector from "./dispatch/DestinationSelector";
 import ItemSelector from "@/components/ItemSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
