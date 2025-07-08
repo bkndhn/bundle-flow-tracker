@@ -352,13 +352,15 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
               onDestinationChange={(destination) => setFormData({ ...formData, destination })}
             />
 
-            {/* 3. Item */}
-            <ItemSelector
-              selectedItem={formData.item}
-              onItemChange={(item) => setFormData({ ...formData, item, shirt_bundles: '', pant_bundles: '', bundles_count: '' })}
-            />
+            {/* 3. Item - Hide when destination is "both" */}
+            {formData.destination !== 'both' && (
+              <ItemSelector
+                selectedItem={formData.item}
+                onItemChange={(item) => setFormData({ ...formData, item, shirt_bundles: '', pant_bundles: '', bundles_count: '' })}
+              />
+            )}
 
-            {/* 4. Number of Bundles */}
+            {/* 4. Number of Bundles - Hide when destination is "both" */}
             {formData.destination !== 'both' && (
               <>
                 {formData.item === 'both' ? (

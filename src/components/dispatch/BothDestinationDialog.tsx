@@ -45,51 +45,52 @@ export function BothDestinationDialog({
         </DialogHeader>
         
         <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700 border-b pb-2">
-            <div>Item</div>
-            <div className="text-center">Big Shop</div>
-            <div className="text-center">Small Shop</div>
-          </div>
-          
-          {/* Shirt Row */}
-          <div className="grid grid-cols-3 gap-4 items-center">
-            <Label className="text-gray-700">Shirt</Label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={bothDestinationData.big_shop.shirt}
-              onChange={(e) => updateData('big_shop', 'shirt', e.target.value)}
-              min="0"
-              className="text-center"
-            />
-            <Input
-              type="number"
-              placeholder="0"
-              value={bothDestinationData.small_shop.shirt}
-              onChange={(e) => updateData('small_shop', 'shirt', e.target.value)}
-              min="0"
-              className="text-center"
-            />
+          {/* Header Row */}
+          <div className="grid grid-cols-3 gap-4 text-sm font-medium text-gray-700 border-b-2 border-gray-300 pb-2">
+            <div className="font-semibold">ITEM</div>
+            <div className="text-center font-semibold">BIG SHOP</div>
+            <div className="text-center font-semibold">SMALL SHOP</div>
           </div>
           
           {/* Pant Row */}
-          <div className="grid grid-cols-3 gap-4 items-center">
-            <Label className="text-gray-700">Pant</Label>
+          <div className="grid grid-cols-3 gap-4 items-center border-b border-gray-200 pb-2">
+            <Label className="text-gray-700 font-medium">PANT</Label>
             <Input
               type="number"
-              placeholder="0"
+              placeholder="INPUT"
               value={bothDestinationData.big_shop.pant}
               onChange={(e) => updateData('big_shop', 'pant', e.target.value)}
               min="0"
-              className="text-center"
+              className="text-center bg-blue-50"
             />
             <Input
               type="number"
-              placeholder="0"
+              placeholder="INPUT"
               value={bothDestinationData.small_shop.pant}
               onChange={(e) => updateData('small_shop', 'pant', e.target.value)}
               min="0"
-              className="text-center"
+              className="text-center bg-green-50"
+            />
+          </div>
+          
+          {/* Shirt Row */}
+          <div className="grid grid-cols-3 gap-4 items-center border-b border-gray-200 pb-2">
+            <Label className="text-gray-700 font-medium">SHIRT</Label>
+            <Input
+              type="number"
+              placeholder="INPUT"
+              value={bothDestinationData.big_shop.shirt}
+              onChange={(e) => updateData('big_shop', 'shirt', e.target.value)}
+              min="0"
+              className="text-center bg-blue-50"
+            />
+            <Input
+              type="number"
+              placeholder="INPUT"
+              value={bothDestinationData.small_shop.shirt}
+              onChange={(e) => updateData('small_shop', 'shirt', e.target.value)}
+              min="0"
+              className="text-center bg-green-50"
             />
           </div>
           
