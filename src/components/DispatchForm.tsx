@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DispatchDestination } from "@/lib/constants";
 import BothDestinationDialog from "./dispatch/BothDestinationDialog";
-import GrandTotalRow from "./GrandTotalRow";
+import GrandTotalRow from "./dispatch/GrandTotalRow";
 import { getGodownStaff } from "@/lib/utils";
 
 const defaultFormData: DispatchFormData = {
