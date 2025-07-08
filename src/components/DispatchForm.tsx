@@ -6,7 +6,7 @@ import ItemSelector from "@/components/ItemSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DispatchDestination } from "@/lib/constants";
-import BothDestinationDialog from "./BothDestinationDialog";
+import BothDestinationDialog from "./dispatch/BothDestinationDialog";
 import GrandTotalRow from "./GrandTotalRow";
 import { getGodownStaff } from "@/lib/utils";
 
