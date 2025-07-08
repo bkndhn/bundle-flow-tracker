@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -101,8 +100,10 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
 
   const handleDelete = async (id: string) => {
     try {
+      // Call the parent component's delete handler only
       await onDeleteStaff(id);
     } catch (error) {
+      console.error('Error deleting staff:', error);
       toast.error('Failed to delete staff member');
     }
   };

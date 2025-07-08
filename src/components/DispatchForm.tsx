@@ -1,127 +1,205 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Staff, GoodsMovement } from '@/types';
-import { FARE_PAYMENT_OPTIONS } from '@/lib/constants';
-import { toast } from 'sonner';
-import { DestinationSelector } from './dispatch/DestinationSelector';
+import { LOCATIONS } from '@/lib/constants';
 import { ItemSelector } from './dispatch/ItemSelector';
+import { DestinationSelector } from './dispatch/DestinationSelector';
 import { BundleInputs } from './dispatch/BundleInputs';
 import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
+import { GrandTotalRow } from './dispatch/GrandTotalRow';
+import { DispatchList } from './dispatch/DispatchList';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DispatchFormProps {
   staff: Staff[];
   onDispatch: (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
-interface BothDestinationData {
-  big_shop: {
-    shirt: string;
-    pant: string;
-  };
-  small_shop: {
-    shirt: string;
-    pant: string;
-  };
-}
-
 export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
   const [formData, setFormData] = useState({
-    destination: '',
-    item: '',
+    item: 'shirt' as 'shirt' | 'pant' | 'both',
+    destination: 'big_shop' as 'big_shop' | 'small_shop' | 'both',
     bundles_count: '',
     shirt_bundles: '',
     pant_bundles: '',
     sent_by: '',
-    fare_payment: 'paid_by_sender',
+    fare_payment: 'paid_by_sender' as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
     accompanying_person: '',
     auto_name: '',
     notes: '',
   });
 
-  const [bothDestinationData, setBothDestinationData] = useState<BothDestinationData>({
+  const [bothDestinationData, setBothDestinationData] = useState({
     big_shop: { shirt: '', pant: '' },
-    small_shop: { shirt: '', pant: '' }
+    small_shop: { shirt: '', pant: '' },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showBothDialog, setShowBothDialog] = useState(false);
+  const [movements, setMovements] = useState<GoodsMovement[]>([]);
 
-  const godownStaff = staff.filter(s => s.location === 'godown');
-  const showBothDialog = formData.destination === 'both';
+  // Load movements for edit/delete functionality
+  const loadMovements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('goods_movements')
+        .select('*')
+        .order('dispatch_date', { ascending: false });
+      
+      if (error) throw error;
+      
+      const transformedMovements: GoodsMovement[] = data?.map(movement => ({
+        id: movement.id,
+        dispatch_date: movement.dispatch_date,
+        bundles_count: movement.bundles_count,
+        item: movement.item as 'shirt' | 'pant' | 'both',
+        shirt_bundles: movement.shirt_bundles || undefined,
+        pant_bundles: movement.pant_bundles || undefined,
+        destination: movement.destination as 'big_shop' | 'small_shop' | 'both',
+        sent_by: movement.sent_by,
+        sent_by_name: '',
+        fare_payment: movement.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+        fare_display_msg: movement.fare_display_msg || undefined,
+        fare_payee_tag: movement.fare_payee_tag || undefined,
+        item_summary_display: movement.item_summary_display || undefined,
+        accompanying_person: movement.accompanying_person || '',
+        auto_name: movement.auto_name,
+        received_at: movement.received_at || undefined,
+        received_by: movement.received_by || undefined,
+        received_by_name: '',
+        condition_notes: movement.condition_notes || undefined,
+        status: movement.status,
+        created_at: movement.created_at || '',
+        updated_at: movement.updated_at || '',
+        last_edited_at: '',
+        last_edited_by: '',
+        is_editable: movement.status === 'dispatched',
+      })) || [];
+      
+      setMovements(transformedMovements);
+    } catch (error) {
+      console.error('Error loading movements:', error);
+    }
+  };
+
+  const handleUpdateMovement = async (movementId: string, updates: any) => {
+    try {
+      const { error } = await supabase
+        .from('goods_movements')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', movementId);
+      
+      if (error) throw error;
+      
+      await loadMovements(); // Refresh the list
+      toast.success('Dispatch updated successfully');
+    } catch (error) {
+      console.error('Error updating movement:', error);
+      toast.error('Failed to update dispatch');
+    }
+  };
+
+  const handleDeleteMovement = async (movementId: string) => {
+    if (!confirm('Are you sure you want to delete this dispatch?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('goods_movements')
+        .delete()
+        .eq('id', movementId);
+      
+      if (error) throw error;
+      
+      await loadMovements(); // Refresh the list
+      toast.success('Dispatch deleted successfully');
+    } catch (error) {
+      console.error('Error deleting movement:', error);
+      toast.error('Failed to delete dispatch');
+    }
+  };
+
+  // Load movements on component mount
+  useEffect(() => {
+    loadMovements();
+  }, []);
+
+  // Auto-calculate total bundles when item is "both"
+  useEffect(() => {
+    if (formData.item === 'both' && formData.destination !== 'both') {
+      const shirtCount = parseInt(formData.shirt_bundles) || 0;
+      const pantCount = parseInt(formData.pant_bundles) || 0;
+      const total = shirtCount + pantCount;
+      setFormData(prev => ({ ...prev, bundles_count: total.toString() }));
+    }
+  }, [formData.shirt_bundles, formData.pant_bundles, formData.item, formData.destination]);
 
   const generateFareDisplayMsg = (farePayment: string) => {
     switch (farePayment) {
-      case 'paid_by_sender':
-        return 'Fare: Paid by Sender';
-      case 'to_be_paid_by_small_shop':
-        return 'Fare to be paid by Small Shop';
-      case 'to_be_paid_by_big_shop':
-        return 'Fare to be paid by Big Shop';
-      default:
-        return '';
+      case 'paid_by_sender': return 'Fare paid by sender';
+      case 'to_be_paid_by_small_shop': return 'Fare to be paid by small shop';
+      case 'to_be_paid_by_big_shop': return 'Fare to be paid by big shop';
+      default: return '';
     }
   };
 
   const generateFarePayeeTag = (farePayment: string) => {
     switch (farePayment) {
-      case 'paid_by_sender':
-        return 'Sender';
-      case 'to_be_paid_by_small_shop':
-        return 'Small Shop';
-      case 'to_be_paid_by_big_shop':
-        return 'Big Shop';
-      default:
-        return '';
+      case 'to_be_paid_by_small_shop': return 'Small Shop';
+      case 'to_be_paid_by_big_shop': return 'Big Shop';
+      default: return '';
     }
   };
 
-  const generateItemSummaryDisplay = (item: string, shirtBundles: string, pantBundles: string, totalBundles: number) => {
+  const generateItemSummaryDisplay = (item: string, shirt: string, pant: string, total: number) => {
     if (item === 'both') {
-      const shirtCount = parseInt(shirtBundles) || 0;
-      const pantCount = parseInt(pantBundles) || 0;
-      return `Shirt - ${shirtCount}, Pant - ${pantCount}, Total - ${totalBundles}`;
+      return `Shirt - ${shirt}, Pant - ${pant}, Total - ${total}`;
     }
     return '';
   };
 
-  const handleDestinationChange = (value: string) => {
-    setFormData({ 
-      ...formData, 
-      destination: value,
-      item: '',
-      bundles_count: '',
-      shirt_bundles: '',
-      pant_bundles: ''
-    });
-  };
-
-  const handleItemChange = (value: string) => {
-    setFormData({ 
-      ...formData, 
-      item: value,
-      bundles_count: '',
-      shirt_bundles: '',
-      pant_bundles: ''
-    });
-  };
-
-  const createBaseMovement = (destination: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
-    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
-      throw new Error('Please fill in all required fields');
-    }
-
+  const createMovementForShop = (destination: 'big_shop' | 'small_shop', shirtBundles: number, pantBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
     const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    const totalBundles = shirtBundles + pantBundles;
 
     return {
       dispatch_date: new Date().toISOString(),
       bundles_count: totalBundles,
-      item: 'shirt',
+      item: 'both',
+      shirt_bundles: shirtBundles,
+      pant_bundles: pantBundles,
+      destination,
+      sent_by: formData.sent_by,
+      sent_by_name: selectedStaff?.name,
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      item_summary_display: generateItemSummaryDisplay('both', String(shirtBundles), String(pantBundles), totalBundles),
+      accompanying_person: formData.accompanying_person,
+      auto_name: formData.auto_name,
+      status: 'dispatched',
+      condition_notes: formData.notes || undefined,
+      last_edited_at: '',
+      last_edited_by: '',
+      is_editable: true,
+    };
+  };
+
+  const createMovement = (destination: 'big_shop' | 'small_shop', item: 'shirt' | 'pant' | 'both', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+    const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    const bundles = parseInt(bundleCount);
+
+    const movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> = {
+      dispatch_date: new Date().toISOString(),
+      bundles_count: bundles,
+      item,
       destination,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
@@ -132,308 +210,317 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       auto_name: formData.auto_name,
       status: 'dispatched',
       condition_notes: formData.notes || undefined,
+      last_edited_at: '',
+      last_edited_by: '',
+      is_editable: true,
     };
+
+    // Add shirt and pant bundles if item is "both"
+    if (item === 'both') {
+      movement.shirt_bundles = parseInt(formData.shirt_bundles) || 0;
+      movement.pant_bundles = parseInt(formData.pant_bundles) || 0;
+      movement.item_summary_display = generateItemSummaryDisplay(
+        item, 
+        formData.shirt_bundles, 
+        formData.pant_bundles, 
+        bundles
+      );
+    }
+
+    return movement;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    try {
-      if (formData.destination === 'both') {
-        // Handle "Both" destination - create one record per destination
-        const movements = [];
+    if (!formData.sent_by || !formData.auto_name) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-        // Big Shop - single record with both items
-        const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
-        const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
-        const bigTotal = bigShirt + bigPant;
+    if (formData.destination === 'both') {
+      setShowBothDialog(true);
+      return;
+    }
 
-        if (bigTotal > 0) {
-          movements.push({
-            ...createBaseMovement('big_shop', bigTotal),
-            item: 'both',
-            shirt_bundles: bigShirt,
-            pant_bundles: bigPant,
-            item_summary_display: generateItemSummaryDisplay('both', String(bigShirt), String(bigPant), bigTotal),
-          });
-        }
-
-        // Small Shop - single record with both items
-        const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
-        const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
-        const smallTotal = smallShirt + smallPant;
-
-        if (smallTotal > 0) {
-          movements.push({
-            ...createBaseMovement('small_shop', smallTotal),
-            item: 'both',
-            shirt_bundles: smallShirt,
-            pant_bundles: smallPant,
-            item_summary_display: generateItemSummaryDisplay('both', String(smallShirt), String(smallPant), smallTotal),
-          });
-        }
-
-        if (movements.length === 0) {
-          toast.error('Please enter at least one bundle count');
-          return;
-        }
-
-        // Dispatch all movements
-        for (const movement of movements) {
-          onDispatch(movement);
-        }
-      } else {
-        // Handle single destination
-        if (formData.item === 'both') {
-          // Create single record for both items
-          const shirtCount = parseInt(formData.shirt_bundles) || 0;
-          const pantCount = parseInt(formData.pant_bundles) || 0;
-          const totalBundles = shirtCount + pantCount;
-          
-          if (totalBundles === 0) {
-            toast.error('Please enter bundle counts');
-            return;
-          }
-
-          const movement = createMovementForBothItems(formData.destination as 'big_shop' | 'small_shop', totalBundles);
-          onDispatch(movement);
-        } else {
-          // Single item dispatch
-          if (!formData.bundles_count) {
-            toast.error('Please enter number of bundles');
-            return;
-          }
-          onDispatch(createMovement(formData.destination as 'big_shop' | 'small_shop', formData.item as 'shirt' | 'pant', formData.bundles_count));
-        }
+    // For single destination
+    if (formData.item === 'both') {
+      if (!formData.shirt_bundles && !formData.pant_bundles) {
+        toast.error('Please enter shirt and/or pant bundle counts');
+        return;
       }
-      
-      // Reset form
-      setFormData({
-        destination: '',
-        item: '',
-        bundles_count: '',
-        shirt_bundles: '',
-        pant_bundles: '',
-        sent_by: '',
-        fare_payment: 'paid_by_sender',
-        accompanying_person: '',
-        auto_name: '',
-        notes: '',
-      });
-      setBothDestinationData({
-        big_shop: { shirt: '', pant: '' },
-        small_shop: { shirt: '', pant: '' }
-      });
-
-      toast.success('Goods dispatched successfully!');
-    } catch (error) {
-      toast.error('Failed to dispatch goods');
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      if (!formData.bundles_count || parseInt(formData.bundles_count) <= 0) {
+        toast.error('Please enter a valid bundle count');
+        return;
+      }
     }
+
+    const bundleCount = formData.item === 'both' ? formData.bundles_count : formData.bundles_count;
+    const movement = createMovement(formData.destination, formData.item, bundleCount);
+    onDispatch(movement);
+    
+    // Reset form
+    setFormData({
+      item: 'shirt',
+      destination: 'big_shop',
+      bundles_count: '',
+      shirt_bundles: '',
+      pant_bundles: '',
+      sent_by: '',
+      fare_payment: 'paid_by_sender',
+      accompanying_person: '',
+      auto_name: '',
+      notes: '',
+    });
+    
+    await loadMovements(); // Refresh the list after dispatch
   };
 
-  const createMovement = (dest: 'big_shop' | 'small_shop', itemType: 'shirt' | 'pant', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
-    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
-      throw new Error('Please fill in all required fields');
+  const handleBothDestinationSubmit = async () => {
+    const movements = [];
+
+    // Big Shop
+    const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
+    const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
+
+    if (bigShirt > 0 || bigPant > 0) {
+      movements.push(createMovementForShop('big_shop', bigShirt, bigPant));
     }
 
-    const selectedStaff = staff.find(s => s.id === formData.sent_by);
-    
-    return {
-      dispatch_date: new Date().toISOString(),
-      bundles_count: parseInt(bundleCount),
-      item: itemType,
-      destination: dest,
-      sent_by: formData.sent_by,
-      sent_by_name: selectedStaff?.name,
-      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
-      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
-      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
-      accompanying_person: formData.accompanying_person,
-      auto_name: formData.auto_name,
-      status: 'dispatched',
-      condition_notes: formData.notes || undefined,
-    };
-  };
+    // Small Shop
+    const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
+    const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
 
-  const createMovementForBothItems = (dest: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
-    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
-      throw new Error('Please fill in all required fields');
+    if (smallShirt > 0 || smallPant > 0) {
+      movements.push(createMovementForShop('small_shop', smallShirt, smallPant));
     }
 
-    const selectedStaff = staff.find(s => s.id === formData.sent_by);
-    const shirtCount = parseInt(formData.shirt_bundles) || 0;
-    const pantCount = parseInt(formData.pant_bundles) || 0;
+    if (movements.length === 0) {
+      toast.error('Please enter at least one bundle count');
+      return;
+    }
+
+    // Create separate dispatch records for each shop
+    for (const movement of movements) {
+      await onDispatch(movement);
+    }
     
-    return {
-      dispatch_date: new Date().toISOString(),
-      bundles_count: totalBundles,
-      item: 'both',
-      shirt_bundles: shirtCount,
-      pant_bundles: pantCount,
-      item_summary_display: generateItemSummaryDisplay('both', formData.shirt_bundles, formData.pant_bundles, totalBundles),
-      destination: dest,
-      sent_by: formData.sent_by,
-      sent_by_name: selectedStaff?.name,
-      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
-      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
-      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
-      accompanying_person: formData.accompanying_person,
-      auto_name: formData.auto_name,
-      status: 'dispatched',
-      condition_notes: formData.notes || undefined,
-    };
+    setShowBothDialog(false);
+    setBothDestinationData({
+      big_shop: { shirt: '', pant: '' },
+      small_shop: { shirt: '', pant: '' },
+    });
+    
+    setFormData({
+      item: 'shirt',
+      destination: 'big_shop',
+      bundles_count: '',
+      shirt_bundles: '',
+      pant_bundles: '',
+      sent_by: '',
+      fare_payment: 'paid_by_sender',
+      accompanying_person: '',
+      auto_name: '',
+      notes: '',
+    });
+    
+    await loadMovements(); // Refresh the list after dispatch
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
-      <Card className="backdrop-blur-sm bg-white/80 border-white/40 shadow-xl">
+    <div className="p-4 space-y-6">
+      <Card className="backdrop-blur-sm bg-white/80 border-white/40">
         <CardHeader>
-          <CardTitle className="text-gray-800 text-xl font-bold">
-            Dispatch Goods
-          </CardTitle>
+          <CardTitle className="text-gray-800">Dispatch Goods</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 1. Date & Time */}
+            {/* 1. Dispatch Date & Time - Auto generated, display only */}
             <div className="space-y-2">
               <Label className="text-gray-700">Dispatch Date & Time</Label>
-              <Input 
-                value={new Date().toLocaleString()} 
-                disabled 
+              <Input
+                value={new Date().toLocaleString()}
+                disabled
                 className="bg-gray-50/60"
               />
             </div>
 
             {/* 2. Destination */}
-            <DestinationSelector 
-              value={formData.destination}
-              onChange={handleDestinationChange}
+            <DestinationSelector
+              selectedDestination={formData.destination}
+              onDestinationChange={(destination) => setFormData({ ...formData, destination })}
             />
 
-            {/* 3. Item */}
-            <ItemSelector 
-              value={formData.item}
-              onChange={handleItemChange}
-              destination={formData.destination}
-            />
-
-            {/* 4. Bundle Inputs */}
-            <BundleInputs 
-              destination={formData.destination}
-              item={formData.item}
-              bundlesCount={formData.bundles_count}
-              shirtBundles={formData.shirt_bundles}
-              pantBundles={formData.pant_bundles}
-              onBundlesCountChange={(value) => setFormData({ ...formData, bundles_count: value })}
-              onShirtBundlesChange={(value) => setFormData({ ...formData, shirt_bundles: value })}
-              onPantBundlesChange={(value) => setFormData({ ...formData, pant_bundles: value })}
-            />
-
-            {/* Both Destination Dialog */}
-            {showBothDialog && (
-              <BothDestinationDialog 
-                data={bothDestinationData}
-                onChange={setBothDestinationData}
+            {/* 3. Item - Hide when destination is "both" */}
+            {formData.destination !== 'both' && (
+              <ItemSelector
+                selectedItem={formData.item}
+                onItemChange={(item) => setFormData({ ...formData, item, shirt_bundles: '', pant_bundles: '', bundles_count: '' })}
               />
+            )}
+
+            {/* 4. Number of Bundles - Hide when destination is "both" */}
+            {formData.destination !== 'both' && (
+              <>
+                {formData.item === 'both' ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Shirt Bundles</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter shirt bundles"
+                          value={formData.shirt_bundles}
+                          onChange={(e) => setFormData({ ...formData, shirt_bundles: e.target.value })}
+                          className="bg-white/90"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Pant Bundles</Label>
+                        <Input
+                          type="number"
+                          placeholder="Enter pant bundles"
+                          value={formData.pant_bundles}
+                          onChange={(e) => setFormData({ ...formData, pant_bundles: e.target.value })}
+                          className="bg-white/90"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-gray-700">Total Bundles (Auto-calculated)</Label>
+                      <Input
+                        type="number"
+                        value={formData.bundles_count}
+                        disabled
+                        className="bg-gray-50/60"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <BundleInputs
+                    bundlesCount={formData.bundles_count}
+                    onBundlesCountChange={(bundles_count) => setFormData({ ...formData, bundles_count })}
+                  />
+                )}
+              </>
             )}
 
             {/* 5. Sent By */}
             <div className="space-y-2">
-              <Label className="text-gray-700">Sent By *</Label>
+              <Label>Sent By *</Label>
               <Select
                 value={formData.sent_by}
                 onValueChange={(value) => setFormData({ ...formData, sent_by: value })}
               >
-                <SelectTrigger className="bg-white/90">
+                <SelectTrigger className="bg-white/80">
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {godownStaff.map((member) => (
+                  {staff.filter(s => s.location === 'godown').map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.name}
+                      {member.name} ({LOCATIONS[member.location]})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-gray-700">Auto Fare Payment</Label>
-              <RadioGroup
+            {/* 6. Auto Fare Payment */}
+            <div className="space-y-2">
+              <Label>Auto Fare Payment *</Label>
+              <Select
                 value={formData.fare_payment}
-                onValueChange={(value) => setFormData({ ...formData, fare_payment: value })}
-                className="grid grid-cols-1 gap-2"
+                onValueChange={(value) => setFormData({ ...formData, fare_payment: value as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop' })}
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="paid_by_sender" id="paid_sender" />
-                  <Label htmlFor="paid_sender" className="text-gray-700 text-sm">
-                    Paid by Sender
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
-                  <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">
-                    To Be Paid by Small Shop
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
-                  <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">
-                    To Be Paid by Big Shop
-                  </Label>
-                </div>
-              </RadioGroup>
+                <SelectTrigger className="bg-white/80">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid_by_sender">Paid by Sender</SelectItem>
+                  <SelectItem value="to_be_paid_by_small_shop">To be paid by Small Shop</SelectItem>
+                  <SelectItem value="to_be_paid_by_big_shop">To be paid by Big Shop</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
+            {/* 7. Person Accompanying Auto */}
             <div className="space-y-2">
-              <Label htmlFor="accompanying" className="text-gray-700">Person Accompanying Auto *</Label>
+              <Label htmlFor="person">Person Accompanying Auto (Optional)</Label>
               <Input
-                id="accompanying"
-                placeholder="Enter name of person accompanying"
+                id="person"
+                placeholder="Enter accompanying person name"
                 value={formData.accompanying_person}
                 onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
-                required
-                className="bg-white/90"
+                className="bg-white/80"
               />
             </div>
 
+            {/* 8. Auto Name */}
             <div className="space-y-2">
-              <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
+              <Label htmlFor="auto">Auto Name *</Label>
               <Input
-                id="auto_name"
-                placeholder="Enter vehicle name/type"
+                id="auto"
+                placeholder="Enter auto name"
                 value={formData.auto_name}
                 onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
                 required
-                className="bg-white/90"
+                className="bg-white/80"
               />
             </div>
 
+            {/* 9. Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-gray-700">Notes (Optional)</Label>
+              <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea
                 id="notes"
-                placeholder="Any additional notes or instructions..."
+                placeholder="Any additional notes..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="bg-white/90"
+                className="bg-white/80"
               />
             </div>
 
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700" 
-              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
             >
-              {isSubmitting ? 'Dispatching...' : 'Dispatch Goods'}
+              Dispatch Goods
             </Button>
           </form>
         </CardContent>
       </Card>
+
+      {/* Dispatch List for Admin */}
+      <Card className="backdrop-blur-sm bg-white/80 border-white/40">
+        <CardHeader>
+          <CardTitle className="text-gray-800">Manage Dispatches</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DispatchList
+            movements={movements}
+            onUpdate={handleUpdateMovement}
+            onDelete={handleDeleteMovement}
+          />
+        </CardContent>
+      </Card>
+
+      <BothDestinationDialog
+        open={showBothDialog}
+        bothDestinationData={bothDestinationData}
+        onDataChange={setBothDestinationData}
+        onSubmit={handleBothDestinationSubmit}
+        onCancel={() => setShowBothDialog(false)}
+        grandTotalRow={
+          <GrandTotalRow
+            bigShopShirt={parseInt(bothDestinationData.big_shop.shirt) || 0}
+            bigShopPant={parseInt(bothDestinationData.big_shop.pant) || 0}
+            smallShopShirt={parseInt(bothDestinationData.small_shop.shirt) || 0}
+            smallShopPant={parseInt(bothDestinationData.small_shop.pant) || 0}
+          />
+        }
+      />
     </div>
   );
 }

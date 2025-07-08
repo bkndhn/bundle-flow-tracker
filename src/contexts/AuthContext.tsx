@@ -1,40 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, AuthContextType } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for authentication
-const mockUsers: (AppUser & { password: string })[] = [
-  {
-    id: '1',
-    email: 'admin@goods.com',
-    password: 'Goodsans7322',
-    role: 'admin',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    email: 'manager@godown.com',
-    password: 'Gdndis65',
-    role: 'godown_manager',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    email: 'manager@smallshop.com',
-    password: 'Mngrss78',
-    role: 'small_shop_manager',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    email: 'manager@bigshop.com',
-    password: 'Mngrbs78',
-    role: 'big_shop_manager',
-    created_at: new Date().toISOString(),
-  },
-];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -50,21 +19,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
+    try {
+      // Query our custom app_users table
+      const { data: users, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error || !users) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      // Simple password verification using the password_hash field
+      if (password !== users.password_hash) {
+        console.error('Invalid password');
+        return false;
+      }
+
       const userWithoutPassword = {
-        id: foundUser.id,
-        email: foundUser.email,
-        role: foundUser.role,
-        created_at: foundUser.created_at,
+        id: users.id,
+        email: users.email,
+        role: users.role as 'admin' | 'godown_manager' | 'small_shop_manager' | 'big_shop_manager',
+        created_at: users.created_at || new Date().toISOString(),
       };
+
       setUser(userWithoutPassword);
       localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    
-    return false;
   };
 
   const logout = () => {
