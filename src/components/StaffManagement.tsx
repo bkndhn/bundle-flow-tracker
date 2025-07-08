@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import { Staff } from '@/types';
 import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface StaffManagementProps {
   staff: Staff[];
@@ -102,17 +100,8 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
 
   const handleDelete = async (id: string) => {
     try {
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('staff')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      // Call the parent component's delete handler
+      // Call the parent component's delete handler only
       await onDeleteStaff(id);
-      toast.success('Staff member deleted successfully');
     } catch (error) {
       console.error('Error deleting staff:', error);
       toast.error('Failed to delete staff member');

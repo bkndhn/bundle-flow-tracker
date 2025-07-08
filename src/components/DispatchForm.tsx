@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -166,19 +165,23 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     return '';
   };
 
-  const createBaseMovement = (destination: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+  const createMovementForShop = (destination: 'big_shop' | 'small_shop', shirtBundles: number, pantBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
     const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    const totalBundles = shirtBundles + pantBundles;
 
     return {
       dispatch_date: new Date().toISOString(),
       bundles_count: totalBundles,
       item: 'both',
+      shirt_bundles: shirtBundles,
+      pant_bundles: pantBundles,
       destination,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
       fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
       fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
       fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      item_summary_display: generateItemSummaryDisplay('both', String(shirtBundles), String(pantBundles), totalBundles),
       accompanying_person: formData.accompanying_person,
       auto_name: formData.auto_name,
       status: 'dispatched',
@@ -280,31 +283,17 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     // Big Shop
     const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
     const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
-    const bigTotal = bigShirt + bigPant;
 
-    if (bigTotal > 0) {
-      movements.push({
-        ...createBaseMovement('big_shop', bigTotal),
-        shirt_bundles: bigShirt,
-        pant_bundles: bigPant,
-        item: 'both' as const,
-        item_summary_display: generateItemSummaryDisplay('both', String(bigShirt), String(bigPant), bigTotal),
-      });
+    if (bigShirt > 0 || bigPant > 0) {
+      movements.push(createMovementForShop('big_shop', bigShirt, bigPant));
     }
 
     // Small Shop
     const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
     const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
-    const smallTotal = smallShirt + smallPant;
 
-    if (smallTotal > 0) {
-      movements.push({
-        ...createBaseMovement('small_shop', smallTotal),
-        shirt_bundles: smallShirt,
-        pant_bundles: smallPant,
-        item: 'both' as const,
-        item_summary_display: generateItemSummaryDisplay('both', String(smallShirt), String(smallPant), smallTotal),
-      });
+    if (smallShirt > 0 || smallPant > 0) {
+      movements.push(createMovementForShop('small_shop', smallShirt, smallPant));
     }
 
     if (movements.length === 0) {
@@ -312,8 +301,9 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       return;
     }
 
+    // Create separate dispatch records for each shop
     for (const movement of movements) {
-      onDispatch(movement);
+      await onDispatch(movement);
     }
     
     setShowBothDialog(false);
