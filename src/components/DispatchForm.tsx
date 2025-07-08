@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DispatchFormData, FormErrors } from "@/types";
 import BundleInputs from "./dispatch/BundleInputs";
 import { DestinationSelector } from "./dispatch/DestinationSelector";
-import ItemSelector from "./dispatch/ItemSelector";
+import { ItemSelector } from "./dispatch/ItemSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DispatchDestination } from "@/lib/constants";
