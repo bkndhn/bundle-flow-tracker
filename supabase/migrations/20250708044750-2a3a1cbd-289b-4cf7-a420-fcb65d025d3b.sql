@@ -8,12 +8,12 @@ CREATE TABLE public.app_users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Insert the users (passwords will be hashed in production)
+-- Insert the users with exact credentials as specified
 INSERT INTO public.app_users (email, password_hash, role) VALUES
-('admin@goods.com', '$2b$10$encrypted_hash_for_Goodsans7322', 'admin'),
-('manager@godown.com', '$2b$10$encrypted_hash_for_Gdndis65', 'godown_manager'),
-('manager@smallshop.com', '$2b$10$encrypted_hash_for_Mngrss78', 'small_shop_manager'),
-('manager@bigshop.com', '$2b$10$encrypted_hash_for_Mngrbs78', 'big_shop_manager');
+('admin@goods.com', 'Goodsans7322', 'admin'),
+('manager@godown', 'Gdndis65', 'godown_manager'),
+('manager@smallshop', 'Mngrss78', 'small_shop_manager'),
+('manager@bigshop', 'Mngrbs78', 'big_shop_manager');
 
 -- Enable RLS
 ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;

@@ -1,73 +1,126 @@
-# Welcome to your Lovable project
+# Goods Movement Tracker
 
-## Project info
+A comprehensive mobile-responsive web application for tracking goods movement between a godown and two shops (big shop and small shop).
 
-**URL**: https://lovable.dev/projects/ad2344c4-7f9d-4b50-b040-503a22be5148
+## Features
 
-## How can I edit this code?
+### Authentication
+- **Admin**: `admin@goods.com` / `Goodsans7322`
+- **Godown Manager**: `manager@godown` / `Gdndis65` 
+- **Small Shop Manager**: `manager@smallshop` / `Mngrss78`
+- **Big Shop Manager**: `manager@bigshop` / `Mngrbs78`
 
-There are several ways of editing your application.
+### Core Functionality
 
-**Use Lovable**
+#### Dashboard
+- Recent movements and activities overview
+- Available only for admin users
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ad2344c4-7f9d-4b50-b040-503a22be5148) and start prompting.
+#### Dispatch Module
+- **Timestamp**: Auto-filled with current time
+- **Destination**: Dropdown (Big Shop, Small Shop, Both)
+- **Item Type**: Dropdown (Shirt, Pant, Both) - shown based on destination
+- **Bundle Inputs**: Dynamic based on item selection
+- **Auto Fare**: Payment options (Paid by Sender, To be paid by Big/Small Shop)
+- **Accompanying Person**: Person traveling with auto
+- **Auto Name**: Vehicle identification
+- **Notes**: Additional comments
 
-Changes made via Lovable will be committed automatically to this repo.
+#### Business Logic
+- If destination is "small shop" or "big shop": Show item selection
+- If item is "shirt" or "pant": Show single bundle input
+- If item is "both": Show separate inputs for shirt and pant bundles with auto-calculated total
+- If destination is "both": Show table format for big shop and small shop with individual inputs
+- Generate separate dispatches for each shop when destination is "both"
 
-**Use your preferred IDE**
+#### Receive Module
+- View dispatch details for verification
+- Role-based receiving (only respective shop staff can receive)
+- Received by dropdown with staff selection
+- Notes for condition/comments
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+#### Reports
+- Generate reports with timestamps after items are received
+- Filter and search functionality
+- Export capabilities
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+#### Admin Module
+- Add new staff members
+- Manage user roles and locations
 
-Follow these steps:
+## Technical Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- **Frontend**: React + TypeScript + Vite
+- **UI**: ShadCN UI + Tailwind CSS
+- **Backend**: Supabase (Authentication + Database)
+- **State Management**: React Query + Context API
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Setup Instructions
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Prerequisites
+- Node.js 18+
+- npm or yarn
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Installation
 
-**Edit a file directly in GitHub**
+1. **Clone and install dependencies**
+   ```bash
+   npm install
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+2. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-**Use GitHub Codespaces**
+3. **Access the application**
+   - Open http://localhost:5173 in your browser
+   - The app is fully mobile-responsive
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Database Setup (Optional - for local development)
 
-## What technologies are used for this project?
+If you want to run Supabase locally:
 
-This project is built with:
+1. **Install Docker Desktop**
+   - Download from https://docs.docker.com/desktop
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+2. **Start Supabase locally**
+   ```bash
+   npx supabase start
+   ```
 
-## How can I deploy this project?
+3. **Apply migrations**
+   ```bash
+   npx supabase db reset
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/ad2344c4-7f9d-4b50-b040-503a22be5148) and click on Share -> Publish.
+### Production Database
 
-## Can I connect a custom domain to my Lovable project?
+The app is already configured to connect to a remote Supabase instance. All predefined users and database schema are set up.
 
-Yes, you can!
+## User Roles & Permissions
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Admin**: Full access to dashboard, reports, staff management
+- **Godown Manager**: Dispatch goods, view reports
+- **Shop Managers**: Receive goods for their respective shops, view reports
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Mobile Responsiveness
+
+The application is fully optimized for mobile devices with:
+- Touch-friendly interfaces
+- Responsive layouts
+- Mobile-first design approach
+- Optimized forms for mobile input
+
+## Development
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+
+## Notes
+
+- Only login functionality is implemented (no signup)
+- User credentials are predefined in the database
+- Role-based access control ensures proper permissions
+- All forms include comprehensive validation
