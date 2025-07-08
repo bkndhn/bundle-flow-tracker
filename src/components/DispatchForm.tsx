@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,16 +55,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
   const godownStaff = staff.filter(s => s.location === 'godown');
   const showBothDialog = formData.destination === 'both';
 
-  const calculateTotalBundles = (data: BothDestinationData) => {
-    const bigShirtCount = parseInt(data.big_shop.shirt) || 0;
-    const bigPantCount = parseInt(data.big_shop.pant) || 0;
-    const smallShirtCount = parseInt(data.small_shop.shirt) || 0;
-    const smallPantCount = parseInt(data.small_shop.pant) || 0;
-    const bigTotal = bigShirtCount + bigPantCount;
-    const smallTotal = smallShirtCount + smallPantCount;
-    return { bigTotal, smallTotal };
-  };
-
   const generateFareDisplayMsg = (farePayment: string) => {
     switch (farePayment) {
       case 'paid_by_sender':
@@ -90,6 +81,15 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     }
   };
 
+  const generateItemSummaryDisplay = (item: string, shirtBundles: string, pantBundles: string, totalBundles: number) => {
+    if (item === 'both') {
+      const shirtCount = parseInt(shirtBundles) || 0;
+      const pantCount = parseInt(pantBundles) || 0;
+      return `Shirt - ${shirtCount}, Pant - ${pantCount}, Total - ${totalBundles}`;
+    }
+    return '';
+  };
+
   const handleDestinationChange = (value: string) => {
     setFormData({ 
       ...formData, 
@@ -109,16 +109,6 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       shirt_bundles: '',
       pant_bundles: ''
     });
-  };
-
-  const handleInputChange = (shop: 'big_shop' | 'small_shop', type: 'shirt' | 'pant', value: string) => {
-    setBothDestinationData(prevData => ({
-      ...prevData,
-      [shop]: {
-        ...prevData[shop],
-        [type]: value
-      }
-    }));
   };
 
   const createBaseMovement = (destination: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
@@ -152,32 +142,72 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     try {
       if (formData.destination === 'both') {
         // Handle "Both" destination - create one record per destination
-        const { bigTotal, smallTotal } = calculateTotalBundles(bothDestinationData);
-        if (bigTotal === 0 && smallTotal === 0) {
+        const movements = [];
+
+        // Big Shop - single record with both items
+        const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
+        const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
+        const bigTotal = bigShirt + bigPant;
+
+        if (bigTotal > 0) {
+          movements.push({
+            ...createBaseMovement('big_shop', bigTotal),
+            item: 'both',
+            shirt_bundles: bigShirt,
+            pant_bundles: bigPant,
+            item_summary_display: generateItemSummaryDisplay('both', String(bigShirt), String(bigPant), bigTotal),
+          });
+        }
+
+        // Small Shop - single record with both items
+        const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
+        const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
+        const smallTotal = smallShirt + smallPant;
+
+        if (smallTotal > 0) {
+          movements.push({
+            ...createBaseMovement('small_shop', smallTotal),
+            item: 'both',
+            shirt_bundles: smallShirt,
+            pant_bundles: smallPant,
+            item_summary_display: generateItemSummaryDisplay('both', String(smallShirt), String(smallPant), smallTotal),
+          });
+        }
+
+        if (movements.length === 0) {
           toast.error('Please enter at least one bundle count');
           return;
         }
 
-        // Dispatch big shop if bundles > 0
-        if (bigTotal > 0) {
-          const bigMovement = createBaseMovement('big_shop', bigTotal);
-          onDispatch({ ...bigMovement, item: 'both' });
-        }
-
-        // Dispatch small shop if bundles > 0
-        if (smallTotal > 0) {
-          const smallMovement = createBaseMovement('small_shop', smallTotal);
-          onDispatch({ ...smallMovement, item: 'both' });
+        // Dispatch all movements
+        for (const movement of movements) {
+          onDispatch(movement);
         }
       } else {
-        // Handle single destination dispatch logic here
-        if (!formData.bundles_count) {
-          toast.error('Please enter number of bundles');
-          return;
-        }
-        onDispatch(createBaseMovement(formData.destination as 'big_shop' | 'small_shop', parseInt(formData.bundles_count)));
-      }
+        // Handle single destination
+        if (formData.item === 'both') {
+          // Create single record for both items
+          const shirtCount = parseInt(formData.shirt_bundles) || 0;
+          const pantCount = parseInt(formData.pant_bundles) || 0;
+          const totalBundles = shirtCount + pantCount;
+          
+          if (totalBundles === 0) {
+            toast.error('Please enter bundle counts');
+            return;
+          }
 
+          const movement = createMovementForBothItems(formData.destination as 'big_shop' | 'small_shop', totalBundles);
+          onDispatch(movement);
+        } else {
+          // Single item dispatch
+          if (!formData.bundles_count) {
+            toast.error('Please enter number of bundles');
+            return;
+          }
+          onDispatch(createMovement(formData.destination as 'big_shop' | 'small_shop', formData.item as 'shirt' | 'pant', formData.bundles_count));
+        }
+      }
+      
       // Reset form
       setFormData({
         destination: '',
@@ -202,6 +232,59 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const createMovement = (dest: 'big_shop' | 'small_shop', itemType: 'shirt' | 'pant', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    
+    return {
+      dispatch_date: new Date().toISOString(),
+      bundles_count: parseInt(bundleCount),
+      item: itemType,
+      destination: dest,
+      sent_by: formData.sent_by,
+      sent_by_name: selectedStaff?.name,
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      accompanying_person: formData.accompanying_person,
+      auto_name: formData.auto_name,
+      status: 'dispatched',
+      condition_notes: formData.notes || undefined,
+    };
+  };
+
+  const createMovementForBothItems = (dest: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    const selectedStaff = staff.find(s => s.id === formData.sent_by);
+    const shirtCount = parseInt(formData.shirt_bundles) || 0;
+    const pantCount = parseInt(formData.pant_bundles) || 0;
+    
+    return {
+      dispatch_date: new Date().toISOString(),
+      bundles_count: totalBundles,
+      item: 'both',
+      shirt_bundles: shirtCount,
+      pant_bundles: pantCount,
+      item_summary_display: generateItemSummaryDisplay('both', formData.shirt_bundles, formData.pant_bundles, totalBundles),
+      destination: dest,
+      sent_by: formData.sent_by,
+      sent_by_name: selectedStaff?.name,
+      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
+      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
+      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      accompanying_person: formData.accompanying_person,
+      auto_name: formData.auto_name,
+      status: 'dispatched',
+      condition_notes: formData.notes || undefined,
+    };
   };
 
   return (
@@ -251,38 +334,102 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
 
             {/* Both Destination Dialog */}
             {showBothDialog && (
-              <BothDestinationDialog
-                bigShopData={bothDestinationData.big_shop}
-                smallShopData={bothDestinationData.small_shop}
-                onInputChange={handleInputChange}
-                totals={calculateTotalBundles(bothDestinationData)}
+              <BothDestinationDialog 
+                data={bothDestinationData}
+                onChange={setBothDestinationData}
               />
             )}
 
-            {/* 5. Other Form Fields */}
+            {/* 5. Sent By */}
             <div className="space-y-2">
-              <Label className="text-gray-700">Sent By</Label>
-              <Select value={formData.sent_by} onValueChange={(value) => setFormData({ ...formData, sent_by: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
+              <Label className="text-gray-700">Sent By *</Label>
+              <Select
+                value={formData.sent_by}
+                onValueChange={(value) => setFormData({ ...formData, sent_by: value })}
+              >
+                <SelectTrigger className="bg-white/90">
+                  <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {godownStaff.map(staffMember => (
-                    <SelectItem key={staffMember.id} value={staffMember.id}>
-                      {staffMember.name}
+                  {godownStaff.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
+            <div className="space-y-3">
+              <Label className="text-gray-700">Auto Fare Payment</Label>
+              <RadioGroup
+                value={formData.fare_payment}
+                onValueChange={(value) => setFormData({ ...formData, fare_payment: value })}
+                className="grid grid-cols-1 gap-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="paid_by_sender" id="paid_sender" />
+                  <Label htmlFor="paid_sender" className="text-gray-700 text-sm">
+                    Paid by Sender
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
+                  <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">
+                    To Be Paid by Small Shop
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
+                  <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">
+                    To Be Paid by Big Shop
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="accompanying" className="text-gray-700">Person Accompanying Auto *</Label>
+              <Input
+                id="accompanying"
+                placeholder="Enter name of person accompanying"
+                value={formData.accompanying_person}
+                onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
+                required
+                className="bg-white/90"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
+              <Input
+                id="auto_name"
+                placeholder="Enter vehicle name/type"
+                value={formData.auto_name}
+                onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
+                required
+                className="bg-white/90"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-gray-700">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any additional notes or instructions..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                className="bg-white/90"
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700" 
               disabled={isSubmitting}
-              className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              {isSubmitting ? 'Processing...' : 'Dispatch Goods'}
+              {isSubmitting ? 'Dispatching...' : 'Dispatch Goods'}
             </Button>
           </form>
         </CardContent>
