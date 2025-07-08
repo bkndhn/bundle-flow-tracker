@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DispatchFormData, FormErrors } from "@/types";
-import BundleInputs from "@/components/BundleInputs";
+import BundleInputs from "./dispatch/BundleInputs";
 import DestinationSelector from "@/components/DestinationSelector";
 import ItemSelector from "@/components/ItemSelector";
 import { Button } from "@/components/ui/button";
