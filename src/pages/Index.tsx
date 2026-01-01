@@ -28,7 +28,7 @@ const Index = () => {
   const loadData = async () => {
     try {
       setDataLoading(true);
-      
+
       // Load staff
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
@@ -78,6 +78,7 @@ const Index = () => {
           received_by_name: (movement.received_by_staff as any)?.name || '',
           condition_notes: movement.condition_notes || undefined,
           status: movement.status,
+          movement_type: ((movement as any).movement_type as 'bundles' | 'pieces') || 'bundles',
           created_at: movement.created_at || '',
           updated_at: movement.updated_at || '',
         })) || [];
@@ -94,10 +95,11 @@ const Index = () => {
   const handleDispatch = async (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       console.log('Dispatching movement:', movement);
-      
+
       // Create the insert data object with proper typing
       const insertData: any = {
         dispatch_date: movement.dispatch_date,
+        movement_type: movement.movement_type || 'bundles',
         bundles_count: movement.bundles_count,
         item: movement.item,
         destination: movement.destination,
@@ -246,13 +248,13 @@ const Index = () => {
   // Filter pending movements based on user role
   const getFilteredPendingMovements = () => {
     const pending = movements.filter(m => m.status === 'dispatched');
-    
+
     if (user?.role === 'small_shop_manager') {
       return pending.filter(m => m.destination === 'small_shop');
     } else if (user?.role === 'big_shop_manager') {
       return pending.filter(m => m.destination === 'big_shop');
     }
-    
+
     return pending;
   };
 
@@ -299,16 +301,16 @@ const Index = () => {
       case 'dispatch':
         return <DispatchForm staff={staff} onDispatch={handleDispatch} />;
       case 'receive':
-        return <ReceiveForm 
-          staff={staff} 
+        return <ReceiveForm
+          staff={staff}
           pendingMovements={pendingMovements}
-          onReceive={handleReceive} 
+          onReceive={handleReceive}
         />;
       case 'reports':
         return <Reports movements={movements} />;
       case 'staff':
-        return <StaffManagement 
-          staff={staff} 
+        return <StaffManagement
+          staff={staff}
           onAddStaff={handleAddStaff}
           onUpdateStaff={handleUpdateStaff}
           onDeleteStaff={handleDeleteStaff}

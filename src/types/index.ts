@@ -11,6 +11,7 @@ export interface Staff {
 export interface GoodsMovement {
   id: string;
   dispatch_date: string;
+  movement_type: 'bundles' | 'pieces';
   bundles_count: number;
   item: 'shirt' | 'pant' | 'both';
   shirt_bundles?: number;

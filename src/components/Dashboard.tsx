@@ -13,12 +13,17 @@ interface DashboardProps {
 export function Dashboard({ movements }: DashboardProps) {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [itemFilter, setItemFilter] = useState<string>('all');
+  const [movementTypeFilter, setMovementTypeFilter] = useState<string>('all');
 
   const filterMovements = (movements: GoodsMovement[]) => {
     return movements.filter(movement => {
       const locationMatch = locationFilter === 'all' || movement.destination === locationFilter;
       const itemMatch = itemFilter === 'all' || movement.item === itemFilter;
-      return locationMatch && itemMatch;
+      const movementTypeMatch =
+        movementTypeFilter === 'all' ||
+        (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
+        (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
+      return locationMatch && itemMatch && movementTypeMatch;
     });
   };
 
@@ -28,19 +33,19 @@ export function Dashboard({ movements }: DashboardProps) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todayMovements = filteredMovements.filter(m => 
+    const todayMovements = filteredMovements.filter(m =>
       new Date(m.dispatch_date) >= today
     );
 
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - 7);
-    const weekMovements = filteredMovements.filter(m => 
+    const weekMovements = filteredMovements.filter(m =>
       new Date(m.dispatch_date) >= weekStart
     );
 
     const monthStart = new Date(today);
     monthStart.setDate(today.getDate() - 30);
-    const monthMovements = filteredMovements.filter(m => 
+    const monthMovements = filteredMovements.filter(m =>
       new Date(m.dispatch_date) >= monthStart
     );
 
@@ -51,28 +56,43 @@ export function Dashboard({ movements }: DashboardProps) {
       today: todayMovements.length,
       week: weekMovements.length,
       month: monthMovements.length,
+      totalQuantity: filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)
     };
   };
 
   const getItemStats = () => {
-    const shirtCount = filteredMovements.filter(m => m.item === 'shirt').length;
-    const pantCount = filteredMovements.filter(m => m.item === 'pant').length;
-    return { shirt: shirtCount, pant: pantCount };
+    const shirtCount = filteredMovements
+      .filter(m => m.item === 'shirt')
+      .reduce((sum, m) => sum + m.bundles_count, 0);
+    const pantCount = filteredMovements
+      .filter(m => m.item === 'pant')
+      .reduce((sum, m) => sum + m.bundles_count, 0);
+    const bothShirtCount = filteredMovements
+      .filter(m => m.item === 'both')
+      .reduce((sum, m) => sum + (m.shirt_bundles || 0), 0);
+    const bothPantCount = filteredMovements
+      .filter(m => m.item === 'both')
+      .reduce((sum, m) => sum + (m.pant_bundles || 0), 0);
+
+    return {
+      shirt: shirtCount + bothShirtCount,
+      pant: pantCount + bothPantCount
+    };
   };
 
   const getLocationStats = () => {
-    const bigShopCount = filteredMovements.filter(m => m.destination === 'big_shop').length;
-    const smallShopCount = filteredMovements.filter(m => m.destination === 'small_shop').length;
+    const bigShopCount = filteredMovements
+      .filter(m => m.destination === 'big_shop')
+      .reduce((sum, m) => sum + m.bundles_count, 0);
+    const smallShopCount = filteredMovements
+      .filter(m => m.destination === 'small_shop')
+      .reduce((sum, m) => sum + m.bundles_count, 0);
     return { big_shop: bigShopCount, small_shop: smallShopCount };
   };
 
   const stats = getStats();
   const itemStats = getItemStats();
   const locationStats = getLocationStats();
-
-  const recentMovements = filteredMovements
-    .sort((a, b) => new Date(b.dispatch_date).getTime() - new Date(a.dispatch_date).getTime())
-    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 space-y-6">
@@ -107,149 +127,155 @@ export function Dashboard({ movements }: DashboardProps) {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Total Movements</p>
-                <p className="text-white text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Package className="h-8 w-8 text-white/60" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Dispatched</p>
-                <p className="text-white text-2xl font-bold">{stats.dispatched}</p>
-              </div>
-              <Truck className="h-8 w-8 text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Received</p>
-                <p className="text-white text-2xl font-bold">{stats.received}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Today</p>
-                <p className="text-white text-2xl font-bold">{stats.today}</p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Item & Location Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Shirt className="h-5 w-5" />
-              Item Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-white/80">Shirts</span>
-                <Badge variant="secondary" className="bg-blue-500/20 text-blue-200">
-                  {itemStats.shirt}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/80">Pants</span>
-                <Badge variant="secondary" className="bg-purple-500/20 text-purple-200">
-                  {itemStats.pant}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Location Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-white/80">Big Shop</span>
-                <Badge variant="secondary" className="bg-green-500/20 text-green-200">
-                  {locationStats.big_shop}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/80">Small Shop</span>
-                <Badge variant="secondary" className="bg-orange-500/20 text-orange-200">
-                  {locationStats.small_shop}
-                </Badge>
+              <div className="space-y-2">
+                <label className="text-white text-sm font-medium">Type</label>
+                <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-32">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="bundles">Bundles</SelectItem>
+                    <SelectItem value="pieces">Pieces</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Movements */}
-      <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-        <CardHeader>
-          <CardTitle className="text-white">Recent Movements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentMovements.length === 0 ? (
-              <p className="text-white/60 text-center py-4">No movements found</p>
-            ) : (
-              recentMovements.map((movement) => (
-                <div key={movement.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="border-white/20 text-white">
-                      {movement.item}
-                    </Badge>
-                    <div>
-                      <p className="text-white font-medium">
-                        {movement.bundles_count} bundles → {movement.destination === 'big_shop' ? 'Big Shop' : 'Small Shop'}
-                      </p>
-                      <p className="text-white/60 text-sm">
-                        {new Date(movement.dispatch_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={movement.status === 'received' ? 'default' : 'secondary'}>
-                    {movement.status}
-                  </Badge>
+      <div className="space-y-8">
+        {/* Overall Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm">Combined Volume</p>
+                  <p className="text-white text-2xl font-bold">{stats.totalQuantity}</p>
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                <TrendingUp className="h-8 w-8 text-white/60" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm">Movements</p>
+                  <p className="text-white text-2xl font-bold">{stats.total}</p>
+                </div>
+                <Package className="h-8 w-8 text-white/60" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm">Dispatched</p>
+                  <p className="text-white text-2xl font-bold">{stats.dispatched}</p>
+                </div>
+                <Truck className="h-8 w-8 text-orange-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm">Received</p>
+                  <p className="text-white text-2xl font-bold">{stats.received}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sections for Bundles and Pieces */}
+        {['bundles', 'pieces'].map((type) => {
+          const typeMovements = movements.filter(m =>
+            type === 'bundles' ? (!m.movement_type || m.movement_type === 'bundles') : m.movement_type === 'pieces'
+          );
+
+          if (movementTypeFilter !== 'all' && movementTypeFilter !== type) return null;
+
+          const summaryCount = typeMovements.reduce((sum, m) => sum + m.bundles_count, 0);
+          const recent = typeMovements
+            .sort((a, b) => new Date(b.dispatch_date).getTime() - new Date(a.dispatch_date).getTime())
+            .slice(0, 3);
+
+          const shirtQ = typeMovements.filter(m => m.item === 'shirt').reduce((sum, m) => sum + m.bundles_count, 0) +
+            typeMovements.filter(m => m.item === 'both').reduce((sum, m) => sum + (m.shirt_bundles || 0), 0);
+          const pantQ = typeMovements.filter(m => m.item === 'pant').reduce((sum, m) => sum + m.bundles_count, 0) +
+            typeMovements.filter(m => m.item === 'both').reduce((sum, m) => sum + (m.pant_bundles || 0), 0);
+
+          return (
+            <div key={type} className="space-y-4">
+              <h2 className="text-white text-xl font-bold capitalize flex items-center gap-2">
+                <Badge variant="outline" className="bg-white/20 text-white border-white/40">
+                  {type === 'bundles' ? '📦' : '🧩'}
+                </Badge>
+                {type} Movement Analysis
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Distribution Card */}
+                <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm flex items-center gap-2">
+                      <Shirt className="h-4 w-4" />
+                      Item Distribution
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Shirts</span>
+                      <span className="text-white font-bold">{shirtQ} {type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Pants</span>
+                      <span className="text-white font-bold">{pantQ} {type}</span>
+                    </div>
+                    <div className="border-t border-white/10 pt-2 flex justify-between">
+                      <span className="text-white/80">Total Volume</span>
+                      <span className="text-white font-bold underline decoration-white/30">{summaryCount} {type}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Type Movements */}
+                <Card className="md:col-span-2 backdrop-blur-xl bg-white/10 border-white/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-white text-sm">Recent {type} Movements</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {recent.length === 0 ? (
+                        <p className="text-white/40 text-xs italic">No recent {type} recorded</p>
+                      ) : (
+                        recent.map((m) => (
+                          <div key={m.id} className="flex items-center justify-between text-xs p-2 bg-white/5 rounded">
+                            <div className="flex flex-col">
+                              <span className="text-white font-medium">{m.bundles_count} {type} of {m.item}</span>
+                              <span className="text-white/40">{new Date(m.dispatch_date).toLocaleDateString()} → {m.destination.replace('_', ' ')}</span>
+                            </div>
+                            <Badge variant={m.status === 'received' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1">
+                              {m.status}
+                            </Badge>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

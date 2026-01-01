@@ -36,7 +36,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   // Filter staff based on logged-in user
   const getFilteredStaff = () => {
     const userEmail = user?.email;
-    
+
     if (userEmail === 'manager@smallshop.com') {
       return staff.filter(s => s.location === 'small_shop');
     } else if (userEmail === 'manager@bigshop.com') {
@@ -60,7 +60,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
       }
 
       const selectedStaff = staff.find(s => s.id === formData.received_by);
-      
+
       const receiveData = {
         received_at: new Date().toISOString(),
         received_by: formData.received_by,
@@ -69,7 +69,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
       };
 
       onReceive(selectedMovement, receiveData);
-      
+
       // Reset form
       setSelectedMovement('');
       setFormData({
@@ -92,11 +92,10 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
         <h2 className="text-lg font-semibold text-gray-900">Pending Receipts</h2>
         <div className="space-y-3">
           {pendingMovements.map((movement) => (
-            <Card 
+            <Card
               key={movement.id}
-              className={`cursor-pointer transition-colors backdrop-blur-sm bg-white/70 border-white/30 ${
-                selectedMovement === movement.id ? 'ring-2 ring-blue-400 bg-blue-50/60' : ''
-              }`}
+              className={`cursor-pointer transition-colors backdrop-blur-sm bg-white/70 border-white/30 ${selectedMovement === movement.id ? 'ring-2 ring-blue-400 bg-blue-50/60' : ''
+                }`}
               onClick={() => setSelectedMovement(movement.id)}
             >
               <CardContent className="p-4">
@@ -105,7 +104,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                     <div className="flex items-center space-x-2 mb-2">
                       <Badge variant="secondary" className="bg-yellow-100/80 text-yellow-800">Dispatched</Badge>
                       <span className="text-sm font-medium">
-                        {movement.bundles_count} bundles
+                        {movement.bundles_count} {movement.movement_type === 'pieces' ? 'pieces' : 'bundles'}
                       </span>
                       {movement.item === 'both' ? (
                         <Badge variant="outline" className="bg-white/60">
@@ -166,9 +165,9 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
               {/* Receipt Time (Auto-filled) */}
               <div className="space-y-2">
                 <Label>Receipt Date & Time</Label>
-                <Input 
-                  value={new Date().toLocaleString()} 
-                  disabled 
+                <Input
+                  value={new Date().toLocaleString()}
+                  disabled
                   className="bg-gray-50/60"
                 />
               </div>
@@ -180,7 +179,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   <strong>Item:</strong> {movement.item === 'both' ? movement.item_summary_display : <span className="capitalize">{movement.item}</span>}
                 </p>
                 <p className="text-sm text-gray-700">
-                  <strong>Bundles:</strong> {movement.bundles_count}
+                  <strong>{movement.movement_type === 'pieces' ? 'Pieces' : 'Bundles'}:</strong> {movement.bundles_count}
                 </p>
                 <p className="text-sm text-gray-700">
                   <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
@@ -234,9 +233,9 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700" 
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Confirming Receipt...' : 'Confirm Receipt'}

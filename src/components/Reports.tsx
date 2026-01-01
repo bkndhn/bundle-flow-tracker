@@ -27,7 +27,7 @@ const expandMovementsForDisplay = (movements: GoodsMovement[]) => {
   return movements.flatMap((movement) => {
     if (movement.item === 'both') {
       const expandedMovements = [];
-      
+
       // Create shirt row if shirt bundles exist
       if (movement.shirt_bundles && movement.shirt_bundles > 0) {
         expandedMovements.push({
@@ -36,7 +36,7 @@ const expandMovementsForDisplay = (movements: GoodsMovement[]) => {
           bundles_count: movement.shirt_bundles,
         });
       }
-      
+
       // Create pant row if pant bundles exist
       if (movement.pant_bundles && movement.pant_bundles > 0) {
         expandedMovements.push({
@@ -45,7 +45,7 @@ const expandMovementsForDisplay = (movements: GoodsMovement[]) => {
           bundles_count: movement.pant_bundles,
         });
       }
-      
+
       return expandedMovements;
     } else {
       return [movement];
@@ -58,28 +58,33 @@ export function Reports({ movements }: ReportsProps) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
   const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant' | 'both'>('all');
+  const [movementTypeFilter, setMovementTypeFilter] = useState<'all' | 'bundles' | 'pieces'>('all');
   const [dateFilter, setDateFilter] = useState<DateFilterType>({ type: 'today' });
 
   // Expand movements for display (split 'both' items into separate rows)
   const expandedMovements = expandMovementsForDisplay(movements);
 
   const filteredMovements = expandedMovements.filter(movement => {
-    const matchesSearch = 
+    const matchesSearch =
       movement.sent_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.accompanying_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.auto_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.condition_notes?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
     const matchesLocation = locationFilter === 'all' || movement.destination === locationFilter;
     const matchesItem = itemFilter === 'all' || movement.item === itemFilter;
-    
+    const matchesMovementType =
+      movementTypeFilter === 'all' ||
+      (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
+      (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
+
     // Date filtering
     const movementDate = parseISO(movement.dispatch_date);
     let matchesDate = true;
-    
+
     switch (dateFilter.type) {
       case 'today':
         matchesDate = isToday(movementDate);
@@ -105,8 +110,8 @@ export function Reports({ movements }: ReportsProps) {
         }
         break;
     }
-    
-    return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate;
+
+    return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate && matchesMovementType;
   });
 
   const formatDateTime = (dateString: string) => {
@@ -162,7 +167,7 @@ export function Reports({ movements }: ReportsProps) {
                   <SelectItem value="received">Received</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={locationFilter} onValueChange={(value: any) => setLocationFilter(value)}>
                 <SelectTrigger className="w-[140px] bg-white/90">
                   <SelectValue placeholder="All Locations" />
@@ -173,7 +178,7 @@ export function Reports({ movements }: ReportsProps) {
                   <SelectItem value="small_shop">Small Shop</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={itemFilter} onValueChange={(value: any) => setItemFilter(value)}>
                 <SelectTrigger className="w-[120px] bg-white/90">
                   <SelectValue placeholder="All Items" />
@@ -185,7 +190,18 @@ export function Reports({ movements }: ReportsProps) {
                   <SelectItem value="both">Both</SelectItem>
                 </SelectContent>
               </Select>
-              
+
+              <Select value={movementTypeFilter} onValueChange={(value: any) => setMovementTypeFilter(value)}>
+                <SelectTrigger className="w-[140px] bg-white/90">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="bundles">Bundles</SelectItem>
+                  <SelectItem value="pieces">Pieces</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Button variant="outline" size="sm" className="bg-white/70">
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -217,7 +233,7 @@ export function Reports({ movements }: ReportsProps) {
               </div>
             </div>
             <div className="bg-purple-50/80 p-3 rounded-lg backdrop-blur-sm">
-              <div className="text-sm text-purple-600 font-medium">Total Bundles</div>
+              <div className="text-sm text-purple-600 font-medium">Total Volume</div>
               <div className="text-2xl font-bold text-purple-900">
                 {movements.reduce((sum, m) => sum + m.bundles_count, 0)}
               </div>
@@ -232,6 +248,7 @@ export function Reports({ movements }: ReportsProps) {
                   <TableHead className="font-semibold">Dispatch Date</TableHead>
                   <TableHead className="font-semibold">Item</TableHead>
                   <TableHead className="font-semibold">Bundles</TableHead>
+                  <TableHead className="font-semibold">Pieces</TableHead>
                   <TableHead className="font-semibold">Destination</TableHead>
                   <TableHead className="font-semibold">Auto Name</TableHead>
                   <TableHead className="font-semibold">Sent By</TableHead>
@@ -262,7 +279,14 @@ export function Reports({ movements }: ReportsProps) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                        {(!movement.movement_type || movement.movement_type === 'bundles') ? (
+                          <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {movement.movement_type === 'pieces' ? (
+                          <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                        ) : '-'}
                       </TableCell>
                       <TableCell>
                         <span className="font-medium text-blue-600">
