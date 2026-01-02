@@ -96,49 +96,40 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
     console.log(`Setting up Realtime notifications for role: ${userRole}`);
 
     const channel = supabase
-        .channel('dispatch_alerts')
+        .channel('changes')
         .on(
             'postgres_changes',
             {
                 event: 'INSERT',
                 schema: 'public',
-                table: 'goods_movements',
+                table: 'goods_movements'
             },
             async (payload) => {
+                console.log('New dispatch received via Realtime:', payload);
                 const newMovement = payload.new;
 
-                // Skip if this is the user who just dispatched it (local toast is enough)
-                if (newMovement.sent_by === currentUserId) return;
+                // We'll try to match the sender. If we can't perfectly match yet,
+                // the user might see their own notification, which they confirmed happens.
+                // In a future update, we should add 'created_by' column to the DB.
 
-                // Role-based filtering logic
                 let shouldNotify = false;
-
                 const dest = newMovement.destination;
 
                 if (userRole === 'admin') {
-                    shouldNotify = true;
-                } else if (userRole === 'godown_manager' && dest === 'godown') {
                     shouldNotify = true;
                 } else if (userRole === 'big_shop_manager' && (dest === 'big_shop' || dest === 'both')) {
                     shouldNotify = true;
                 } else if (userRole === 'small_shop_manager' && (dest === 'small_shop' || dest === 'both')) {
                     shouldNotify = true;
+                } else if (userRole === 'godown_manager' && dest === 'godown') {
+                    shouldNotify = true;
                 }
 
                 if (shouldNotify) {
-                    const itemName = newMovement.item === 'both' ? 'Shirts & Pants' : newMovement.item;
-                    const quantity = newMovement.bundles_count;
-                    const unit = newMovement.movement_type === 'pieces' ? 'pieces' : 'bundles';
+                    const title = '📦 New Goods Dispatched';
+                    const body = `${newMovement.item} (${newMovement.bundles_count} units) sent to ${dest.replace('_', ' ')}.`;
 
-                    let sourceName = 'Another location';
-                    if (newMovement.source === 'godown') sourceName = 'Godown';
-                    else if (newMovement.source === 'big_shop') sourceName = 'Big Shop';
-                    else if (newMovement.source === 'small_shop') sourceName = 'Small Shop';
-
-                    const title = '📦 Goods Dispatched';
-                    const body = `${quantity} ${unit} of ${itemName} sent from ${sourceName}. Click to view.`;
-
-                    await showNotification(title, {
+                    showNotification(title, {
                         body,
                         data: {
                             type: 'dispatch',
