@@ -1,0 +1,164 @@
+// Notification Service for Dispatch Alerts
+// Handles push notification permissions and sending notifications
+
+import { supabase } from '@/integrations/supabase/client';
+
+// Check if notifications are supported
+export const isNotificationSupported = () => {
+    return 'Notification' in window && 'serviceWorker' in navigator;
+};
+
+// Request notification permission
+export const requestNotificationPermission = async (): Promise<boolean> => {
+    if (!isNotificationSupported()) {
+        console.log('Notifications not supported in this browser');
+        return false;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+    } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        return false;
+    }
+};
+
+// Get current notification permission status
+export const getNotificationPermission = (): NotificationPermission | 'unsupported' => {
+    if (!isNotificationSupported()) {
+        return 'unsupported';
+    }
+    return Notification.permission;
+};
+
+// Show a notification
+export const showNotification = async (
+    title: string,
+    options: {
+        body: string;
+        icon?: string;
+        badge?: string;
+        tag?: string;
+        data?: any;
+    }
+) => {
+    if (!isNotificationSupported()) {
+        console.log('Notifications not supported');
+        return;
+    }
+
+    if (Notification.permission !== 'granted') {
+        console.log('Notification permission not granted');
+        return;
+    }
+
+    try {
+        // Try to use service worker notification (works in background)
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+            body: options.body,
+            icon: options.icon || '/logo-192.png',
+            badge: options.badge || '/logo-192.png',
+            tag: options.tag || `dispatch-${Date.now()}`, // Unique tag for each
+            data: options.data,
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            actions: [
+                { action: 'open', title: 'Open App' },
+                { action: 'dismiss', title: 'Dismiss' }
+            ]
+        });
+    } catch (error) {
+        console.error('Error showing notification:', error);
+        // Fallback to regular notification
+        new Notification(title, {
+            body: options.body,
+            icon: options.icon || '/logo-192.png',
+            tag: options.tag || `dispatch-${Date.now()}`,
+        });
+    }
+};
+
+/**
+ * Subscribe to real-time dispatches and notify if destination matches user role
+ */
+export const subscribeToIncomingDispatches = (userRole: string, currentUserId: string) => {
+    if (!isNotificationSupported()) return null;
+
+    console.log(`Setting up Realtime notifications for role: ${userRole}`);
+
+    const channel = supabase
+        .channel('dispatch_alerts')
+        .on(
+            'postgres_changes',
+            {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'goods_movements',
+            },
+            async (payload) => {
+                const newMovement = payload.new;
+
+                // Skip if this is the user who just dispatched it (local toast is enough)
+                if (newMovement.sent_by === currentUserId) return;
+
+                // Role-based filtering logic
+                let shouldNotify = false;
+
+                const dest = newMovement.destination;
+
+                if (userRole === 'admin') {
+                    shouldNotify = true;
+                } else if (userRole === 'godown_manager' && dest === 'godown') {
+                    shouldNotify = true;
+                } else if (userRole === 'big_shop_manager' && (dest === 'big_shop' || dest === 'both')) {
+                    shouldNotify = true;
+                } else if (userRole === 'small_shop_manager' && (dest === 'small_shop' || dest === 'both')) {
+                    shouldNotify = true;
+                }
+
+                if (shouldNotify) {
+                    const itemName = newMovement.item === 'both' ? 'Shirts & Pants' : newMovement.item;
+                    const quantity = newMovement.bundles_count;
+                    const unit = newMovement.movement_type === 'pieces' ? 'pieces' : 'bundles';
+
+                    let sourceName = 'Another location';
+                    if (newMovement.source === 'godown') sourceName = 'Godown';
+                    else if (newMovement.source === 'big_shop') sourceName = 'Big Shop';
+                    else if (newMovement.source === 'small_shop') sourceName = 'Small Shop';
+
+                    const title = '📦 Goods Dispatched';
+                    const body = `${quantity} ${unit} of ${itemName} sent from ${sourceName}. Click to view.`;
+
+                    await showNotification(title, {
+                        body,
+                        data: {
+                            type: 'dispatch',
+                            url: '/receive'
+                        }
+                    });
+                }
+            }
+        )
+        .subscribe();
+
+    return channel;
+};
+
+// Initialize notifications on app load
+export const initializeNotifications = async () => {
+    if (!isNotificationSupported()) {
+        return false;
+    }
+
+    // If permission is default (not asked yet), request it
+    if (Notification.permission === 'default') {
+        // Wait a bit before asking to not be intrusive
+        setTimeout(async () => {
+            await requestNotificationPermission();
+        }, 3000);
+    }
+
+    return Notification.permission === 'granted';
+};

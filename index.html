@@ -1,23 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Goods Movement Tracker</title>
-    <meta name="description" content="Track goods movement between Godown and Shops" />
-    <meta name="author" content="Lovable" />
+    <meta name="description" content="Professional goods movement tracking between Godown and Shops" />
+    <meta name="author" content="Goods Tracker Team" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e3a8a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GoodsTracker" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/logo-512.png" />
+    <link rel="apple-touch-icon" href="/logo-192.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
 
+    <!-- Open Graph -->
     <meta property="og:title" content="Goods Movement Tracker" />
-    <meta property="og:description" content="Track goods movement between Godown and Shops" />
+    <meta property="og:description" content="Professional goods movement tracking between Godown and Shops" />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo-512.png" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Goods Movement Tracker" />
+    <meta name="twitter:description" content="Professional goods movement tracking between Godown and Shops" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered:', registration);
+            })
+            .catch((error) => {
+              console.log('SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

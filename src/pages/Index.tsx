@@ -10,13 +10,49 @@ import { Reports } from '@/components/Reports';
 import { Staff, GoodsMovement } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { initializeNotifications, subscribeToIncomingDispatches } from '@/services/notificationService';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState('dashboard');
+
+  // Set default page based on user role
+  const getDefaultPage = () => {
+    switch (user?.role) {
+      case 'admin': return 'dashboard';
+      case 'godown_manager': return 'dispatch';  // Godown dispatches to shops
+      case 'big_shop_manager':
+      case 'small_shop_manager': return 'receive';  // Shops receive from godown
+      default: return 'dispatch';
+    }
+  };
+
+  const [currentPage, setCurrentPage] = useState('');
   const [staff, setStaff] = useState<Staff[]>([]);
   const [movements, setMovements] = useState<GoodsMovement[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+
+  // Set default page when user loads
+  useEffect(() => {
+    if (user && !currentPage) {
+      setCurrentPage(getDefaultPage());
+    }
+  }, [user]);
+
+  // Initialize notifications and subscribe to real-time dispatches
+  useEffect(() => {
+    if (user && user.role) {
+      initializeNotifications();
+
+      const channel = subscribeToIncomingDispatches(user.role, user.id);
+
+      return () => {
+        if (channel) {
+          console.log('Unsubscribing from notifications channel');
+          supabase.removeChannel(channel);
+        }
+      };
+    }
+  }, [user]);
 
   // Load data from Supabase - removed auto-refresh interval
   useEffect(() => {
@@ -58,29 +94,9 @@ const Index = () => {
       } else {
         // Transform the data to match our interface with proper type handling
         const transformedMovements: GoodsMovement[] = movementsData?.map(movement => ({
-          id: movement.id,
-          dispatch_date: movement.dispatch_date,
-          bundles_count: movement.bundles_count,
-          item: movement.item as 'shirt' | 'pant' | 'both',
-          shirt_bundles: (movement as any).shirt_bundles || undefined,
-          pant_bundles: (movement as any).pant_bundles || undefined,
-          destination: movement.destination,
-          sent_by: movement.sent_by,
-          sent_by_name: (movement.sent_by_staff as any)?.name || '',
-          fare_payment: movement.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
-          fare_display_msg: (movement as any).fare_display_msg || undefined,
-          fare_payee_tag: (movement as any).fare_payee_tag || undefined,
-          item_summary_display: (movement as any).item_summary_display || undefined,
-          accompanying_person: movement.accompanying_person || '',
-          auto_name: movement.auto_name,
-          received_at: movement.received_at || undefined,
-          received_by: movement.received_by || undefined,
-          received_by_name: (movement.received_by_staff as any)?.name || '',
-          condition_notes: movement.condition_notes || undefined,
-          status: movement.status,
-          movement_type: ((movement as any).movement_type as 'bundles' | 'pieces') || 'bundles',
-          created_at: movement.created_at || '',
-          updated_at: movement.updated_at || '',
+          ...movement,
+          sent_by_name: (movement.sent_by_staff as any)?.name || 'Unknown',
+          received_by_name: (movement.received_by_staff as any)?.name || undefined,
         })) || [];
         setMovements(transformedMovements);
       }
@@ -102,6 +118,7 @@ const Index = () => {
         movement_type: movement.movement_type || 'bundles',
         bundles_count: movement.bundles_count,
         item: movement.item,
+        source: movement.source || 'godown',
         destination: movement.destination,
         sent_by: movement.sent_by,
         fare_payment: movement.fare_payment,
@@ -144,6 +161,7 @@ const Index = () => {
       } else {
         console.log('Dispatch successful:', data);
         toast.success('Goods dispatched successfully!');
+
         loadData(); // Refresh data after successful dispatch
       }
     } catch (error) {
@@ -299,7 +317,7 @@ const Index = () => {
         }
         return <Dashboard movements={movements} />;
       case 'dispatch':
-        return <DispatchForm staff={staff} onDispatch={handleDispatch} />;
+        return <DispatchForm staff={staff} userRole={user.role} onDispatch={handleDispatch} />;
       case 'receive':
         return <ReceiveForm
           staff={staff}
@@ -308,7 +326,7 @@ const Index = () => {
         />;
       case 'reports':
         return <Reports movements={movements} />;
-      case 'staff':
+      case 'admin':
         return <StaffManagement
           staff={staff}
           onAddStaff={handleAddStaff}
@@ -316,11 +334,14 @@ const Index = () => {
           onDeleteStaff={handleDeleteStaff}
         />;
       default:
-        return user.role === 'admin' ? <Dashboard movements={movements} /> : (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-gray-600">Welcome! Please use the navigation to access your available sections.</p>
-          </div>
-        );
+        // Show appropriate default page based on role
+        if (user.role === 'admin') {
+          return <Dashboard movements={movements} />;
+        } else if (user.role === 'godown_manager') {
+          return <DispatchForm staff={staff} userRole={user.role} onDispatch={handleDispatch} />;
+        } else {
+          return <ReceiveForm staff={staff} pendingMovements={pendingMovements} onReceive={handleReceive} />;
+        }
     }
   };
 

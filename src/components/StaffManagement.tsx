@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { Staff } from '@/types';
 import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { UserManagement } from './UserManagement';
 
 interface StaffManagementProps {
   staff: Staff[];
@@ -50,7 +50,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
       };
 
       await onAddStaff(newStaff);
-      
+
       // Reset form
       setAddFormData({
         name: '',
@@ -67,7 +67,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStaff) return;
-    
+
     setIsSubmitting(true);
 
     try {
@@ -115,7 +115,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
           <Users className="h-5 w-5" />
           <h2 className="text-lg font-semibold text-gray-900">Staff Management</h2>
         </div>
-        <Button 
+        <Button
           onClick={() => setShowAddForm(!showAddForm)}
           size="sm"
           className="flex items-center space-x-1"
@@ -162,15 +162,15 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
               </div>
 
               <div className="flex space-x-2">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={isSubmitting}
                   className="flex-1"
                 >
                   {isSubmitting ? 'Adding...' : 'Add Staff'}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setShowAddForm(false)}
                 >
@@ -196,12 +196,12 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                   <Badge variant="secondary">
                     {LOCATIONS[member.location]}
                   </Badge>
-                  
+
                   {/* Edit Button */}
                   <Dialog open={editingStaff?.id === member.id} onOpenChange={(open) => !open && setEditingStaff(null)}>
                     <DialogTrigger asChild>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => handleEdit(member)}
                       >
@@ -242,15 +242,15 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                         </div>
 
                         <div className="flex space-x-2">
-                          <Button 
-                            type="submit" 
+                          <Button
+                            type="submit"
                             disabled={isSubmitting}
                             className="flex-1"
                           >
                             {isSubmitting ? 'Updating...' : 'Update Staff'}
                           </Button>
-                          <Button 
-                            type="button" 
+                          <Button
+                            type="button"
                             variant="outline"
                             onClick={() => setEditingStaff(null)}
                           >
@@ -296,7 +296,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
       {staff.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">No staff members added yet</p>
-          <Button 
+          <Button
             onClick={() => setShowAddForm(true)}
             className="mt-2"
           >
@@ -304,6 +304,9 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
           </Button>
         </div>
       )}
+
+      {/* User Credentials Management Section */}
+      <UserManagement />
     </div>
   );
 }

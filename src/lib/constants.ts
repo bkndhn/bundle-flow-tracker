@@ -23,6 +23,7 @@ export const MOVEMENT_STATUS = {
 } as const;
 
 export const DATE_FILTER_OPTIONS = {
+  all: 'All Time',
   today: 'Today',
   yesterday: 'Yesterday',
   this_week: 'This Week',

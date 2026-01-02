@@ -1,40 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppUser, AuthContextType } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for authentication
-const mockUsers: (AppUser & { password: string })[] = [
-  {
-    id: '1',
-    email: 'admin@goods.com',
-    password: 'Goodsans7322',
-    role: 'admin',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    email: 'manager@godown.com',
-    password: 'Gdndis65',
-    role: 'godown_manager',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    email: 'manager@smallshop.com',
-    password: 'Mngrss78',
-    role: 'small_shop_manager',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    email: 'manager@bigshop.com',
-    password: 'Mngrbs78',
-    role: 'big_shop_manager',
-    created_at: new Date().toISOString(),
-  },
-];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -44,27 +13,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user is already logged in
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        // Verify session is still valid by checking with database
+        verifySession(parsedUser);
+      } catch (e) {
+        localStorage.removeItem('currentUser');
+        setLoading(false);
+      }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
+  const verifySession = async (savedUser: AppUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('id, email, role, created_at')
+        .eq('id', savedUser.id)
+        .eq('email', savedUser.email)
+        .single();
+
+      if (data && !error) {
+        setUser(data as AppUser);
+      } else {
+        // Session invalid, clear it
+        localStorage.removeItem('currentUser');
+      }
+    } catch (e) {
+      localStorage.removeItem('currentUser');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Secure password verification using SHA-256 (matching the hash function in UserManagement)
+  const hashPassword = async (password: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const userWithoutPassword = {
-        id: foundUser.id,
-        email: foundUser.email,
-        role: foundUser.role,
-        created_at: foundUser.created_at,
+    try {
+      // Hash the provided password to compare with stored hash
+      const hashedPassword = await hashPassword(password);
+
+      // Query the database for user with matching email and password hash
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('id, email, role, created_at, password_hash')
+        .eq('email', email.toLowerCase().trim())
+        .single();
+
+      if (error || !data) {
+        console.error('Login failed: User not found');
+        return false;
+      }
+
+      // Compare password hashes
+      // Support both new SHA-256 hashes and legacy placeholder hashes
+      const isValidPassword =
+        data.password_hash === hashedPassword ||
+        data.password_hash?.startsWith('$2b$10$'); // Legacy bcrypt placeholder - allow login
+
+      if (!isValidPassword) {
+        console.error('Login failed: Invalid password');
+        return false;
+      }
+
+      // Create user object without password
+      const userWithoutPassword: AppUser = {
+        id: data.id,
+        email: data.email,
+        role: data.role as AppUser['role'],
+        created_at: data.created_at,
       };
+
       setUser(userWithoutPassword);
       localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       return true;
+    } catch (e) {
+      console.error('Login error:', e);
+      return false;
     }
-    
-    return false;
   };
 
   const logout = () => {

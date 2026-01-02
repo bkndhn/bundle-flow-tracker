@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, Eye, EyeOff } from 'lucide-react';
+import { Truck, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LoginForm() {
@@ -41,8 +40,10 @@ export function LoginForm() {
       <div className="w-full max-w-md">
         <Card className="backdrop-blur-sm bg-white/80 border-white/40 shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
-              <LogIn className="h-6 w-6" />
+            <div className="mx-auto mb-4 bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-xl shadow-lg">
+              <Truck className="h-10 w-10 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-800">
               Goods Movement Tracker
             </CardTitle>
             <p className="text-gray-600">Sign in to continue</p>
@@ -63,7 +64,7 @@ export function LoginForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" name="password-label" className="text-gray-700">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"

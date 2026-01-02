@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from 'lucide-react';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants';
+import { format } from 'date-fns';
 
 interface DateFilterProps {
   onFilterChange: (filter: {
@@ -15,25 +16,35 @@ interface DateFilterProps {
 }
 
 export function DateFilter({ onFilterChange }: DateFilterProps) {
+  const today = format(new Date(), 'yyyy-MM-dd');
   const [filterType, setFilterType] = useState('today');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
 
   const handleFilterTypeChange = (value: string) => {
     setFilterType(value);
     if (value !== 'custom') {
       onFilterChange({ type: value });
+    } else {
+      // When switching to custom, apply the current dates
+      onFilterChange({ type: 'custom', startDate, endDate });
     }
   };
 
-  const handleDateRangeChange = () => {
-    if (startDate && endDate) {
-      onFilterChange({
-        type: 'custom',
-        startDate,
-        endDate
-      });
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    // If end date is before start date, update end date to match start date
+    if (endDate < value) {
+      setEndDate(value);
+      onFilterChange({ type: 'custom', startDate: value, endDate: value });
+    } else {
+      onFilterChange({ type: 'custom', startDate: value, endDate });
     }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    onFilterChange({ type: 'custom', startDate, endDate: value });
   };
 
   return (
@@ -42,7 +53,7 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
         <Calendar className="h-4 w-4 text-gray-500" />
         <Label className="text-sm font-medium">Date Filter</Label>
       </div>
-      
+
       <Select value={filterType} onValueChange={handleFilterTypeChange}>
         <SelectTrigger className="w-[200px] bg-white/90">
           <SelectValue placeholder="Select date range" />
@@ -63,10 +74,8 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
             <Input
               type="date"
               value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                if (endDate) handleDateRangeChange();
-              }}
+              max={today}
+              onChange={(e) => handleStartDateChange(e.target.value)}
               className="bg-white/90"
             />
           </div>
@@ -75,10 +84,9 @@ export function DateFilter({ onFilterChange }: DateFilterProps) {
             <Input
               type="date"
               value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                if (startDate) handleDateRangeChange();
-              }}
+              min={startDate}
+              max={today}
+              onChange={(e) => handleEndDateChange(e.target.value)}
               className="bg-white/90"
             />
           </div>

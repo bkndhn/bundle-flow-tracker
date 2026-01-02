@@ -31,19 +31,37 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const movement = pendingMovements.find(m => m.id === selectedMovement);
+  // Get the destination that this user can receive at
+  const getUserDestination = (): 'godown' | 'big_shop' | 'small_shop' | null => {
+    switch (user?.role) {
+      case 'godown_manager': return 'godown';
+      case 'big_shop_manager': return 'big_shop';
+      case 'small_shop_manager': return 'small_shop';
+      case 'admin': return null; // Admin sees all
+      default: return null;
+    }
+  };
 
-  // Filter staff based on logged-in user
+  const userDestination = getUserDestination();
+
+  // Filter pending movements: only show movements destined for this user's location
+  const filteredPendingMovements = userDestination
+    ? pendingMovements.filter(m => m.destination === userDestination)
+    : pendingMovements; // Admin sees all
+
+  const movement = filteredPendingMovements.find(m => m.id === selectedMovement);
+
+  // Filter staff based on user's location for receiving
   const getFilteredStaff = () => {
-    const userEmail = user?.email;
-
-    if (userEmail === 'manager@smallshop.com') {
+    if (user?.role === 'godown_manager') {
+      return staff.filter(s => s.location === 'godown');
+    } else if (user?.role === 'small_shop_manager') {
       return staff.filter(s => s.location === 'small_shop');
-    } else if (userEmail === 'manager@bigshop.com') {
+    } else if (user?.role === 'big_shop_manager') {
       return staff.filter(s => s.location === 'big_shop');
     } else {
-      // Admin or other users see all shop staff
-      return staff.filter(s => s.location === 'big_shop' || s.location === 'small_shop');
+      // Admin sees all staff
+      return staff;
     }
   };
 
@@ -77,7 +95,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
         condition_notes: '',
       });
 
-      toast.success('Goods received successfully!');
+      // Toast notification is handled by the parent component (Index.tsx)
     } catch (error) {
       toast.error('Failed to confirm receipt');
     } finally {
@@ -91,7 +109,17 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Pending Receipts</h2>
         <div className="space-y-3">
-          {pendingMovements.map((movement) => (
+          {filteredPendingMovements.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50/50 rounded-lg border border-gray-100">
+              <div className="text-gray-400 mb-2">
+                <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <p className="text-gray-500 font-medium">No Pending Receipts</p>
+              <p className="text-gray-400 text-sm mt-1">All shipments have been received</p>
+            </div>
+          ) : filteredPendingMovements.map((movement) => (
             <Card
               key={movement.id}
               className={`cursor-pointer transition-colors backdrop-blur-sm bg-white/70 border-white/30 ${selectedMovement === movement.id ? 'ring-2 ring-blue-400 bg-blue-50/60' : ''
@@ -245,11 +273,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
         </Card>
       )}
 
-      {pendingMovements.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No pending receipts at the moment</p>
-        </div>
-      )}
+      {pendingMovements.length === 0 && filteredPendingMovements.length === 0 && null}
     </div>
   );
 }

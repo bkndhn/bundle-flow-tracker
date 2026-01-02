@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Staff, GoodsMovement } from '@/types';
+import { Staff, GoodsMovement, AppUser } from '@/types';
 import { FARE_PAYMENT_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { DestinationSelector } from './dispatch/DestinationSelector';
@@ -17,6 +17,7 @@ import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
 
 interface DispatchFormProps {
   staff: Staff[];
+  userRole: AppUser['role'];
   onDispatch: (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => void;
 }
 
@@ -31,10 +32,36 @@ interface BothDestinationData {
   };
 }
 
-export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
+export function DispatchForm({ staff, userRole, onDispatch }: DispatchFormProps) {
+  // Determine source and available destinations based on user role
+  const getSourceFromRole = (): 'godown' | 'big_shop' | 'small_shop' => {
+    switch (userRole) {
+      case 'big_shop_manager': return 'big_shop';
+      case 'small_shop_manager': return 'small_shop';
+      default: return 'godown';
+    }
+  };
+
+  const getAvailableDestinations = () => {
+    switch (userRole) {
+      case 'big_shop_manager':
+      case 'small_shop_manager':
+        return [{ value: 'godown', label: 'Godown' }];
+      default:
+        return [
+          { value: 'big_shop', label: 'Big Shop' },
+          { value: 'small_shop', label: 'Small Shop' },
+          { value: 'both', label: 'Both Shops' }
+        ];
+    }
+  };
+
+  const source = getSourceFromRole();
+  const availableDestinations = getAvailableDestinations();
+
   const [formData, setFormData] = useState({
     movement_type: 'bundles' as 'bundles' | 'pieces',
-    destination: '',
+    destination: availableDestinations.length === 1 ? availableDestinations[0].value : '',
     item: '',
     bundles_count: '',
     shirt_bundles: '',
@@ -53,7 +80,8 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const godownStaff = staff.filter(s => s.location === 'godown');
+  // Get staff based on source location
+  const availableStaff = staff.filter(s => s.location === source);
   const showBothDialog = formData.destination === 'both';
 
   const generateFareDisplayMsg = (farePayment: string) => {
@@ -122,7 +150,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     });
   };
 
-  const createBaseMovement = (destination: 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+  const createBaseMovement = (destination: 'godown' | 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
     if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
       throw new Error('Please fill in all required fields');
     }
@@ -134,6 +162,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
       movement_type: formData.movement_type,
       bundles_count: totalBundles,
       item: 'shirt',
+      source,
       destination,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
@@ -147,7 +176,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
     };
   };
 
-  const createMovement = (dest: 'big_shop' | 'small_shop', itemType: 'shirt' | 'pant', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
+  const createMovement = (dest: 'godown' | 'big_shop' | 'small_shop', itemType: 'shirt' | 'pant', bundleCount: string): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
     const base = createBaseMovement(dest, parseInt(bundleCount));
     return {
       ...base,
@@ -254,7 +283,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
         small_shop: { shirt: '', pant: '' }
       });
 
-      toast.success('Goods dispatched successfully!');
+      // Toast notification is handled by the parent component (Index.tsx)
     } catch (error: any) {
       toast.error(error.message || 'Failed to dispatch goods');
     } finally {
@@ -302,6 +331,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
             <DestinationSelector
               value={formData.destination}
               onChange={handleDestinationChange}
+              availableDestinations={availableDestinations}
             />
 
             <ItemSelector
@@ -339,7 +369,7 @@ export function DispatchForm({ staff, onDispatch }: DispatchFormProps) {
                   <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {godownStaff.map((member) => (
+                  {availableStaff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name}
                     </SelectItem>
