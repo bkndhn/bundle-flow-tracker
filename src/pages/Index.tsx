@@ -317,7 +317,7 @@ const Index = () => {
         }
         return <Dashboard movements={movements} />;
       case 'dispatch':
-        return <DispatchForm staff={staff} userRole={user.role} onDispatch={handleDispatch} />;
+        return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} />;
       case 'receive':
         return <ReceiveForm
           staff={staff}
@@ -338,7 +338,7 @@ const Index = () => {
         if (user.role === 'admin') {
           return <Dashboard movements={movements} />;
         } else if (user.role === 'godown_manager') {
-          return <DispatchForm staff={staff} userRole={user.role} onDispatch={handleDispatch} />;
+          return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} />;
         } else {
           return <ReceiveForm staff={staff} pendingMovements={pendingMovements} onReceive={handleReceive} />;
         }

@@ -17,6 +17,7 @@ import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
 
 interface DispatchFormProps {
   staff: Staff[];
+  movements: GoodsMovement[];
   userRole: AppUser['role'];
   onDispatch: (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => void;
 }
@@ -32,7 +33,7 @@ interface BothDestinationData {
   };
 }
 
-export function DispatchForm({ staff, userRole, onDispatch }: DispatchFormProps) {
+export function DispatchForm({ staff, movements, userRole, onDispatch }: DispatchFormProps) {
   // Determine source and available destinations based on user role
   const getSourceFromRole = (): 'godown' | 'big_shop' | 'small_shop' => {
     switch (userRole) {
@@ -58,6 +59,19 @@ export function DispatchForm({ staff, userRole, onDispatch }: DispatchFormProps)
 
   const source = getSourceFromRole();
   const availableDestinations = getAvailableDestinations();
+
+  // Extract unique suggestions from existing movements
+  const autoSuggestions = Array.from(new Set(
+    movements
+      .filter(m => m.auto_name)
+      .map(m => m.auto_name)
+  )).sort();
+
+  const accompanyingSuggestions = Array.from(new Set(
+    movements
+      .filter(m => m.accompanying_person)
+      .map(m => m.accompanying_person)
+  )).sort();
 
   const [formData, setFormData] = useState({
     movement_type: 'bundles' as 'bundles' | 'pieces',
@@ -410,24 +424,36 @@ export function DispatchForm({ staff, userRole, onDispatch }: DispatchFormProps)
               <Label htmlFor="accompanying" className="text-gray-700">Person Accompanying Auto *</Label>
               <Input
                 id="accompanying"
+                list="accompanying-list"
                 placeholder="Enter name of person accompanying"
                 value={formData.accompanying_person}
                 onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
                 required
                 className="bg-white/90"
               />
+              <datalist id="accompanying-list">
+                {accompanyingSuggestions.map(name => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
               <Input
                 id="auto_name"
+                list="auto-list"
                 placeholder="Enter vehicle name/type"
                 value={formData.auto_name}
                 onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
                 required
                 className="bg-white/90"
               />
+              <datalist id="auto-list">
+                {autoSuggestions.map(name => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
 
             <div className="space-y-2">

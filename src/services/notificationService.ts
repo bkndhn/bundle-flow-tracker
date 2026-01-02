@@ -2,6 +2,7 @@
 // Handles push notification permissions and sending notifications
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Check if notifications are supported
 export const isNotificationSupported = () => {
@@ -69,14 +70,20 @@ export const showNotification = async (
                 { action: 'dismiss', title: 'Dismiss' }
             ]
         });
+        toast.success('Notification test sent successfully!');
     } catch (error) {
         console.error('Error showing notification:', error);
         // Fallback to regular notification
-        new Notification(title, {
-            body: options.body,
-            icon: options.icon || '/logo-192.png',
-            tag: options.tag || `dispatch-${Date.now()}`,
-        });
+        try {
+            new Notification(title, {
+                body: options.body,
+                icon: options.icon || '/logo-192.png',
+                tag: options.tag || `dispatch-${Date.now()}`,
+            });
+            toast.success('Notification test sent (Fallback mode)!');
+        } catch (e) {
+            toast.error('Failed to send notification. Check your browser settings.');
+        }
     }
 };
 
@@ -161,4 +168,36 @@ export const initializeNotifications = async () => {
     }
 
     return Notification.permission === 'granted';
+};
+
+// Send a test notification to verify system reliability
+export const sendTestNotification = async () => {
+    if (!isNotificationSupported()) {
+        toast.error('Notifications are not supported in this browser.');
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        toast.error('Notification permission is denied. Please allow notifications in browser settings.');
+        return;
+    }
+
+    if (Notification.permission === 'default') {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+            toast.error('Notification permission was not granted.');
+            return;
+        }
+    }
+
+    const title = '🔔 Test Dispatch System';
+    const body = 'This is a test notification to verify your device alerts are working. Like WhatsApp, you should see this even in the background!';
+
+    await showNotification(title, {
+        body,
+        data: {
+            type: 'test',
+            url: '/'
+        }
+    });
 };

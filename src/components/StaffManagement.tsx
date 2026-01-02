@@ -110,7 +110,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-2">
           <Users className="h-5 w-5" />
           <h2 className="text-lg font-semibold text-gray-900">Staff Management</h2>
@@ -118,7 +118,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
         <Button
           onClick={() => setShowAddForm(!showAddForm)}
           size="sm"
-          className="flex items-center space-x-1"
+          className="flex items-center space-x-1 w-full sm:w-auto justify-center"
         >
           <Plus className="h-4 w-4" />
           <span>Add Staff</span>
@@ -188,12 +188,12 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
           <Card key={member.id}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{member.name}</h3>
-                  <p className="text-sm text-gray-600">{LOCATIONS[member.location]}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-gray-900 truncate">{member.name}</h3>
+                  <p className="text-sm text-gray-600 truncate">{LOCATIONS[member.location]}</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Badge variant="secondary" className="hidden xs:inline-flex">
                     {LOCATIONS[member.location]}
                   </Badge>
 

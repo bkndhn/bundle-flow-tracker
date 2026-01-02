@@ -97,14 +97,14 @@ export function Dashboard({ movements }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 space-y-6">
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="mb-6">
         <Card className="backdrop-blur-xl bg-white/10 border-white/20">
           <CardContent className="p-4">
-            <div className="flex gap-4">
-              <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-2 flex-1">
                 <label className="text-white text-sm font-medium">Location</label>
                 <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-40">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-full sm:w-40">
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent>
@@ -114,10 +114,10 @@ export function Dashboard({ movements }: DashboardProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 <label className="text-white text-sm font-medium">Item</label>
                 <Select value={itemFilter} onValueChange={setItemFilter}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-32">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-full sm:w-32">
                     <SelectValue placeholder="All Items" />
                   </SelectTrigger>
                   <SelectContent>
@@ -127,10 +127,10 @@ export function Dashboard({ movements }: DashboardProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 <label className="text-white text-sm font-medium">Type</label>
                 <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-32">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white w-full sm:w-32">
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>

@@ -208,7 +208,7 @@ export function Reports({ movements }: ReportsProps) {
         </CardHeader>
         <CardContent>
           {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -220,10 +220,10 @@ export function Reports({ movements }: ReportsProps) {
                 />
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 lg:flex lg:gap-2 gap-2">
               <Select value={statusFilter} onValueChange={(value: any) => handleFilterChange(setStatusFilter, value)}>
-                <SelectTrigger className="w-[140px] bg-white/90">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -233,8 +233,8 @@ export function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={locationFilter} onValueChange={(value: any) => handleFilterChange(setLocationFilter, value)}>
-                <SelectTrigger className="w-[140px] bg-white/90">
-                  <SelectValue placeholder="All Locations" />
+                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                  <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
@@ -244,8 +244,8 @@ export function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={itemFilter} onValueChange={(value: any) => handleFilterChange(setItemFilter, value)}>
-                <SelectTrigger className="w-[120px] bg-white/90">
-                  <SelectValue placeholder="All Items" />
+                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                  <SelectValue placeholder="Item" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Items</SelectItem>
@@ -256,8 +256,8 @@ export function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={movementTypeFilter} onValueChange={(value: any) => handleFilterChange(setMovementTypeFilter, value)}>
-                <SelectTrigger className="w-[140px] bg-white/90">
-                  <SelectValue placeholder="All types" />
+                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                  <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
@@ -269,12 +269,12 @@ export function Reports({ movements }: ReportsProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                className="col-span-2 h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 lg:flex-1"
                 onClick={exportToExcel}
                 disabled={filteredMovements.length === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export Excel
+                Export
               </Button>
             </div>
           </div>
@@ -311,99 +311,101 @@ export function Reports({ movements }: ReportsProps) {
           </div>
 
           {/* Movements Table */}
-          <div className="border rounded-lg overflow-hidden bg-white/60 backdrop-blur-sm">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/80">
-                  <TableHead className="font-semibold">Dispatch Date</TableHead>
-                  <TableHead className="font-semibold">Item</TableHead>
-                  <TableHead className="font-semibold">Bundles</TableHead>
-                  <TableHead className="font-semibold">Pieces</TableHead>
-                  <TableHead className="font-semibold">Destination</TableHead>
-                  <TableHead className="font-semibold">Auto Name</TableHead>
-                  <TableHead className="font-semibold">Sent By</TableHead>
-                  <TableHead className="font-semibold">Accompanying</TableHead>
-                  <TableHead className="font-semibold">Fare Payment</TableHead>
-                  <TableHead className="font-semibold">Received By</TableHead>
-                  <TableHead className="font-semibold">Received At</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedMovements.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
-                      No movements found matching your criteria
-                    </TableCell>
+          <div className="border rounded-lg overflow-x-auto bg-white/60 backdrop-blur-sm">
+            <div className="min-w-[1200px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="font-semibold">Dispatch Date</TableHead>
+                    <TableHead className="font-semibold">Item</TableHead>
+                    <TableHead className="font-semibold">Bundles</TableHead>
+                    <TableHead className="font-semibold">Pieces</TableHead>
+                    <TableHead className="font-semibold">Destination</TableHead>
+                    <TableHead className="font-semibold">Auto Name</TableHead>
+                    <TableHead className="font-semibold">Sent By</TableHead>
+                    <TableHead className="font-semibold">Accompanying</TableHead>
+                    <TableHead className="font-semibold">Fare Payment</TableHead>
+                    <TableHead className="font-semibold">Received By</TableHead>
+                    <TableHead className="font-semibold">Received At</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Notes</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedMovements.map((movement, index) => (
-                    <TableRow key={`${movement.id}-${movement.item}-${index}`} className="hover:bg-gray-50/60">
-                      <TableCell className="font-medium">
-                        {formatDateTime(movement.dispatch_date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize bg-white/80">
-                          {movement.item}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {(!movement.movement_type || movement.movement_type === 'bundles') ? (
-                          <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {movement.movement_type === 'pieces' ? (
-                          <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-blue-600">
-                          {LOCATIONS[movement.destination]}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {movement.auto_name || (
-                          <span className="text-gray-400 italic text-sm">Not specified</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{movement.sent_by_name || 'Unknown'}</TableCell>
-                      <TableCell>
-                        {movement.accompanying_person || (
-                          <span className="text-gray-400 italic text-sm">None</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs">
-                          {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {movement.received_by_name || (
-                          <span className="text-gray-400 italic text-sm">Pending</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {movement.received_at ? (
-                          formatDateTime(movement.received_at)
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">Pending</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(movement.status)}</TableCell>
-                      <TableCell>
-                        {movement.condition_notes ? (
-                          <span className="text-sm">{movement.condition_notes}</span>
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">No notes</span>
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {paginatedMovements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                        No movements found matching your criteria
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedMovements.map((movement, index) => (
+                      <TableRow key={`${movement.id}-${movement.item}-${index}`} className="hover:bg-gray-50/60">
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {formatDateTime(movement.dispatch_date)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize bg-white/80">
+                            {movement.item}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {(!movement.movement_type || movement.movement_type === 'bundles') ? (
+                            <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {movement.movement_type === 'pieces' ? (
+                            <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-blue-600 whitespace-nowrap">
+                            {LOCATIONS[movement.destination]}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {movement.auto_name || (
+                            <span className="text-gray-400 italic text-sm">Not specified</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{movement.sent_by_name || 'Unknown'}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {movement.accompanying_person || (
+                            <span className="text-gray-400 italic text-sm">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs">
+                            {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
+                          </span>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {movement.received_by_name || (
+                            <span className="text-gray-400 italic text-sm">Pending</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {movement.received_at ? (
+                            formatDateTime(movement.received_at)
+                          ) : (
+                            <span className="text-gray-400 italic text-sm">Pending</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(movement.status)}</TableCell>
+                        <TableCell>
+                          {movement.condition_notes ? (
+                            <span className="text-sm line-clamp-2 max-w-[200px]">{movement.condition_notes}</span>
+                          ) : (
+                            <span className="text-gray-400 italic text-sm">No notes</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* Pagination Controls */}
