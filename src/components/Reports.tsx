@@ -158,7 +158,7 @@ export function Reports({ movements }: ReportsProps) {
       'Movement Type': movement.movement_type || 'bundles',
       'Bundles': (!movement.movement_type || movement.movement_type === 'bundles') ? movement.bundles_count : '',
       'Pieces': movement.movement_type === 'pieces' ? movement.bundles_count : '',
-      'Source': LOCATIONS[(movement as any).source] || 'Godown',
+      'Source': LOCATIONS[movement.source] || 'Godown',
       'Destination': LOCATIONS[movement.destination],
       'Auto Name': movement.auto_name || '',
       'Sent By': movement.sent_by_name || 'Unknown',
@@ -167,7 +167,8 @@ export function Reports({ movements }: ReportsProps) {
       'Received By': movement.received_by_name || 'Pending',
       'Received At': movement.received_at ? formatDateTime(movement.received_at) : 'Pending',
       'Status': MOVEMENT_STATUS[movement.status],
-      'Notes': movement.condition_notes || ''
+      'Dispatch Notes': movement.dispatch_notes || movement.condition_notes || '',
+      'Receive Notes': movement.receive_notes || ''
     }));
 
     // Create worksheet
@@ -285,22 +286,24 @@ export function Reports({ movements }: ReportsProps) {
             <DateFilter onFilterChange={(filter) => { setDateFilter(filter); setCurrentPage(1); }} />
           </div>
 
-          {/* Summary Stats - Updated to use filtered movements */}
+          {/* Summary Stats - Using unique movement IDs for accurate count */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-blue-600 font-medium">Total Movements</div>
-              <div className="text-2xl font-bold text-blue-900">{filteredMovements.length}</div>
+              <div className="text-2xl font-bold text-blue-900">
+                {new Set(filteredMovements.map(m => m.id)).size}
+              </div>
             </div>
             <div className="bg-green-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-green-600 font-medium">Completed</div>
               <div className="text-2xl font-bold text-green-900">
-                {filteredMovements.filter(m => m.status === 'received').length}
+                {new Set(filteredMovements.filter(m => m.status === 'received').map(m => m.id)).size}
               </div>
             </div>
             <div className="bg-yellow-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-yellow-600 font-medium">Pending</div>
               <div className="text-2xl font-bold text-yellow-900">
-                {filteredMovements.filter(m => m.status === 'dispatched').length}
+                {new Set(filteredMovements.filter(m => m.status === 'dispatched').map(m => m.id)).size}
               </div>
             </div>
             <div className="bg-purple-50/80 p-3 rounded-lg backdrop-blur-sm">
@@ -321,6 +324,7 @@ export function Reports({ movements }: ReportsProps) {
                     <TableHead className="font-semibold">Item</TableHead>
                     <TableHead className="font-semibold">Bundles</TableHead>
                     <TableHead className="font-semibold">Pieces</TableHead>
+                    <TableHead className="font-semibold">Source</TableHead>
                     <TableHead className="font-semibold">Destination</TableHead>
                     <TableHead className="font-semibold">Auto Name</TableHead>
                     <TableHead className="font-semibold">Sent By</TableHead>
@@ -329,13 +333,14 @@ export function Reports({ movements }: ReportsProps) {
                     <TableHead className="font-semibold">Received By</TableHead>
                     <TableHead className="font-semibold">Received At</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Notes</TableHead>
+                    <TableHead className="font-semibold">Dispatch Notes</TableHead>
+                    <TableHead className="font-semibold">Receive Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedMovements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={15} className="text-center py-8 text-gray-500">
                         No movements found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -359,6 +364,11 @@ export function Reports({ movements }: ReportsProps) {
                           {movement.movement_type === 'pieces' ? (
                             <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
                           ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-purple-600 whitespace-nowrap">
+                            {LOCATIONS[movement.source] || 'Godown'}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <span className="font-medium text-blue-600 whitespace-nowrap">
@@ -395,10 +405,17 @@ export function Reports({ movements }: ReportsProps) {
                         </TableCell>
                         <TableCell>{getStatusBadge(movement.status)}</TableCell>
                         <TableCell>
-                          {movement.condition_notes ? (
-                            <span className="text-sm line-clamp-2 max-w-[200px]">{movement.condition_notes}</span>
+                          {movement.dispatch_notes || movement.condition_notes ? (
+                            <span className="text-sm line-clamp-2 max-w-[150px]">{movement.dispatch_notes || movement.condition_notes}</span>
                           ) : (
-                            <span className="text-gray-400 italic text-sm">No notes</span>
+                            <span className="text-gray-400 italic text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {movement.receive_notes ? (
+                            <span className="text-sm line-clamp-2 max-w-[150px]">{movement.receive_notes}</span>
+                          ) : (
+                            <span className="text-gray-400 italic text-sm">-</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -410,62 +427,64 @@ export function Reports({ movements }: ReportsProps) {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 px-2 gap-3">
-              <div className="text-sm text-gray-600 text-center sm:text-left">
-                Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredMovements.length)} of {filteredMovements.length} entries
-              </div>
-              <div className="flex items-center gap-1 flex-wrap justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="bg-white/80 px-2 sm:px-3"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 2) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 1) {
-                      pageNum = totalPages - 2 + i;
-                    } else {
-                      pageNum = currentPage - 1 + i;
-                    }
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`${currentPage === pageNum ? "bg-blue-600" : "bg-white/80"} min-w-[36px]`}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
+          {
+            totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between mt-4 px-2 gap-3">
+                <div className="text-sm text-gray-600 text-center sm:text-left">
+                  Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredMovements.length)} of {filteredMovements.length} entries
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="bg-white/80 px-2 sm:px-3"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 flex-wrap justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="bg-white/80 px-2 sm:px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Previous</span>
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 2) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 1) {
+                        pageNum = totalPages - 2 + i;
+                      } else {
+                        pageNum = currentPage - 1 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`${currentPage === pageNum ? "bg-blue-600" : "bg-white/80"} min-w-[36px]`}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="bg-white/80 px-2 sm:px-3"
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            )
+          }
+        </CardContent >
+      </Card >
+    </div >
   );
 }

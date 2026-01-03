@@ -11,6 +11,8 @@ import { Staff, GoodsMovement } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { initializeNotifications, subscribeToIncomingDispatches } from '@/services/notificationService';
+import { WhatsAppShareDialog } from '@/components/WhatsAppShareDialog';
+import { getWhatsAppSettings, WhatsAppSettings } from '@/services/whatsappService';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -18,6 +20,11 @@ const Index = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [movements, setMovements] = useState<GoodsMovement[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+
+  // WhatsApp sharing state
+  const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings | null>(null);
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [lastDispatchData, setLastDispatchData] = useState<any>(null);
 
   // Set default page based on user role
   const getDefaultPage = () => {
@@ -121,6 +128,8 @@ const Index = () => {
           ...movement,
           movement_type: (movement as any).movement_type || 'bundles',
           source: (movement as any).source || 'godown',
+          dispatch_notes: (movement as any).dispatch_notes || undefined,
+          receive_notes: (movement as any).receive_notes || undefined,
           sent_by_name: (movement.sent_by_staff as any)?.name || 'Unknown',
           received_by_name: (movement.received_by_staff as any)?.name || undefined,
         })) as GoodsMovement[] || [];
@@ -170,7 +179,9 @@ const Index = () => {
         insertData.item_summary_display = movement.item_summary_display;
       }
       if (movement.condition_notes) {
+        // Save to both for backward compatibility
         insertData.condition_notes = movement.condition_notes;
+        insertData.dispatch_notes = movement.condition_notes;
       }
 
       console.log('Insert data:', insertData);
@@ -187,6 +198,30 @@ const Index = () => {
       } else {
         console.log('Dispatch successful:', data);
         toast.success('Goods dispatched successfully!');
+
+        // Prepare WhatsApp sharing data
+        const selectedStaff = staff.find(s => s.id === movement.sent_by);
+        setLastDispatchData({
+          item: movement.item,
+          bundles_count: movement.bundles_count,
+          movement_type: movement.movement_type || 'bundles',
+          source: movement.source || 'godown',
+          destination: movement.destination,
+          auto_name: movement.auto_name,
+          sent_by_name: selectedStaff?.name || 'Unknown',
+          accompanying_person: movement.accompanying_person,
+          dispatch_notes: movement.condition_notes,
+          fare_display_msg: movement.fare_display_msg,
+          shirt_bundles: movement.shirt_bundles,
+          pant_bundles: movement.pant_bundles,
+        });
+
+        // Show WhatsApp dialog if enabled
+        const settings = await getWhatsAppSettings();
+        setWhatsAppSettings(settings);
+        if (settings.whatsapp_enabled) {
+          setShowWhatsAppDialog(true);
+        }
 
         loadData(); // Refresh data after successful dispatch
       }
@@ -208,7 +243,7 @@ const Index = () => {
         .update({
           received_at: receiveData.received_at,
           received_by: receiveData.received_by,
-          condition_notes: receiveData.condition_notes || null,
+          receive_notes: receiveData.condition_notes || null,
           status: 'received',
           updated_at: new Date().toISOString(),
         })
@@ -368,9 +403,21 @@ const Index = () => {
   }
 
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderCurrentPage()}
-    </Layout>
+    <>
+      <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+        {renderCurrentPage()}
+      </Layout>
+
+      {/* WhatsApp Share Dialog */}
+      {whatsAppSettings && lastDispatchData && (
+        <WhatsAppShareDialog
+          open={showWhatsAppDialog}
+          onClose={() => setShowWhatsAppDialog(false)}
+          settings={whatsAppSettings}
+          dispatchData={lastDispatchData}
+        />
+      )}
+    </>
   );
 };
 

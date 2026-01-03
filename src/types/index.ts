@@ -29,7 +29,9 @@ export interface GoodsMovement {
   received_at?: string;
   received_by?: string;
   received_by_name?: string;
-  condition_notes?: string;
+  condition_notes?: string;  // Legacy, kept for backward compatibility
+  dispatch_notes?: string;   // Notes added during dispatch
+  receive_notes?: string;    // Notes added during receive
   status: 'dispatched' | 'received';
   created_at: string;
   updated_at: string;

@@ -12,6 +12,7 @@ import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
+import { WhatsAppSettingsPanel } from './WhatsAppSettingsPanel';
 
 interface StaffManagementProps {
   staff: Staff[];
@@ -307,6 +308,9 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
 
       {/* User Credentials Management Section */}
       <UserManagement />
+
+      {/* WhatsApp Settings Section */}
+      <WhatsAppSettingsPanel />
     </div>
   );
 }

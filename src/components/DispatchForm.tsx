@@ -46,8 +46,15 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
   const getAvailableDestinations = () => {
     switch (userRole) {
       case 'big_shop_manager':
+        return [
+          { value: 'godown', label: 'Godown' },
+          { value: 'small_shop', label: 'Small Shop' }
+        ];
       case 'small_shop_manager':
-        return [{ value: 'godown', label: 'Godown' }];
+        return [
+          { value: 'godown', label: 'Godown' },
+          { value: 'big_shop', label: 'Big Shop' }
+        ];
       case 'godown_manager':
       case 'admin':
         return [
@@ -464,10 +471,10 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-gray-700">Notes (Optional)</Label>
+              <Label htmlFor="notes" className="text-gray-700">Dispatch Notes (Optional)</Label>
               <Textarea
                 id="notes"
-                placeholder="Any additional notes or instructions..."
+                placeholder="Any notes about the dispatch (visible in reports)..."
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}

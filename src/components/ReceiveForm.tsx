@@ -213,7 +213,10 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
                 </p>
                 <p className="text-sm text-gray-700">
-                  <strong>Destination:</strong> {LOCATIONS[movement.destination]}
+                  <strong>From:</strong> {LOCATIONS[movement.source] || 'Godown'}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>To:</strong> {LOCATIONS[movement.destination]}
                 </p>
                 <p className="text-sm text-gray-700">
                   <strong>Sent by:</strong> {movement.sent_by_name}
@@ -221,9 +224,9 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 <p className="text-sm text-gray-700">
                   <strong>Fare:</strong> {movement.fare_display_msg || 'Not specified'}
                 </p>
-                {movement.condition_notes && (
+                {(movement.dispatch_notes || movement.condition_notes) && (
                   <p className="text-sm text-gray-700">
-                    <strong>Notes:</strong> {movement.condition_notes}
+                    <strong>Dispatch Notes:</strong> {movement.dispatch_notes || movement.condition_notes}
                   </p>
                 )}
               </div>
@@ -248,12 +251,12 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 </Select>
               </div>
 
-              {/* Condition/Notes */}
+              {/* Receive Notes */}
               <div className="space-y-2">
-                <Label htmlFor="notes">Condition / Notes (Optional)</Label>
+                <Label htmlFor="notes">Receive Notes (Optional)</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Any notes about the condition of goods or delivery..."
+                  placeholder="Any notes about the received goods condition..."
                   value={formData.condition_notes}
                   onChange={(e) => setFormData({ ...formData, condition_notes: e.target.value })}
                   rows={3}
