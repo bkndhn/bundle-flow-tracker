@@ -10,20 +10,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        // Verify session is still valid by checking with database
-        verifySession(parsedUser);
-      } catch (e) {
+    let isMounted = true;
+
+    // Safety timeout - never stay loading forever
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn('Auth loading timeout - clearing state');
         localStorage.removeItem('currentUser');
         setLoading(false);
       }
-    } else {
-      setLoading(false);
-    }
+    }, 5000); // 5 second max loading time
+
+    // Check if user is already logged in
+    const initAuth = async () => {
+      try {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          await verifySession(parsedUser);
+        } else {
+          if (isMounted) setLoading(false);
+        }
+      } catch (e) {
+        console.error('Auth init error:', e);
+        localStorage.removeItem('currentUser');
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(loadingTimeout);
+    };
   }, []);
 
   const verifySession = async (savedUser: AppUser) => {
@@ -42,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('currentUser');
       }
     } catch (e) {
+      console.error('Session verification error:', e);
       localStorage.removeItem('currentUser');
     } finally {
       setLoading(false);
