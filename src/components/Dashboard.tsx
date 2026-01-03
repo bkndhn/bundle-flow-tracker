@@ -109,6 +109,7 @@ export function Dashboard({ movements }: DashboardProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Locations</SelectItem>
+                    <SelectItem value="godown">Godown</SelectItem>
                     <SelectItem value="big_shop">Big Shop</SelectItem>
                     <SelectItem value="small_shop">Small Shop</SelectItem>
                   </SelectContent>

@@ -48,6 +48,13 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
       case 'big_shop_manager':
       case 'small_shop_manager':
         return [{ value: 'godown', label: 'Godown' }];
+      case 'godown_manager':
+      case 'admin':
+        return [
+          { value: 'big_shop', label: 'Big Shop' },
+          { value: 'small_shop', label: 'Small Shop' },
+          { value: 'both', label: 'Both Shops' }
+        ];
       default:
         return [
           { value: 'big_shop', label: 'Big Shop' },

@@ -14,6 +14,10 @@ import { initializeNotifications, subscribeToIncomingDispatches } from '@/servic
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [currentPage, setCurrentPage] = useState('');
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [movements, setMovements] = useState<GoodsMovement[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   // Set default page based on user role
   const getDefaultPage = () => {
@@ -26,15 +30,35 @@ const Index = () => {
     }
   };
 
-  const [currentPage, setCurrentPage] = useState('');
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [movements, setMovements] = useState<GoodsMovement[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  // Filter movements that are destined for the current user's location but not yet received
+  const getFilteredPendingMovements = () => {
+    return movements.filter(m => {
+      if (m.status !== 'dispatched') return false;
 
-  // Set default page when user loads
+      // Admin sees all pending
+      if (user?.role === 'admin') return true;
+
+      // Godown manager sees what's coming to godown
+      if (user?.role === 'godown_manager' && m.destination === 'godown') return true;
+
+      // Shop managers see what's coming to their shop
+      if (user?.role === 'big_shop_manager' && m.destination === 'big_shop') return true;
+      if (user?.role === 'small_shop_manager' && m.destination === 'small_shop') return true;
+
+      // Also handle 'both' if applicable (though currently dispatches to 'both' are split into two movements)
+      if (m.destination === 'both' && (user?.role === 'big_shop_manager' || user?.role === 'small_shop_manager')) return true;
+
+      return false;
+    });
+  };
+
+  const pendingMovements = getFilteredPendingMovements();
+
+  // Set default page when user loads or role changes
   useEffect(() => {
-    if (user && !currentPage) {
-      setCurrentPage(getDefaultPage());
+    if (user && user.role) {
+      const defaultPage = getDefaultPage();
+      setCurrentPage(prev => prev || defaultPage);
     }
   }, [user]);
 
@@ -95,9 +119,11 @@ const Index = () => {
         // Transform the data to match our interface with proper type handling
         const transformedMovements: GoodsMovement[] = movementsData?.map(movement => ({
           ...movement,
+          movement_type: (movement as any).movement_type || 'bundles',
+          source: (movement as any).source || 'godown',
           sent_by_name: (movement.sent_by_staff as any)?.name || 'Unknown',
           received_by_name: (movement.received_by_staff as any)?.name || undefined,
-        })) || [];
+        })) as GoodsMovement[] || [];
         setMovements(transformedMovements);
       }
     } catch (error) {
@@ -263,21 +289,6 @@ const Index = () => {
     }
   };
 
-  // Filter pending movements based on user role
-  const getFilteredPendingMovements = () => {
-    const pending = movements.filter(m => m.status === 'dispatched');
-
-    if (user?.role === 'small_shop_manager') {
-      return pending.filter(m => m.destination === 'small_shop');
-    } else if (user?.role === 'big_shop_manager') {
-      return pending.filter(m => m.destination === 'big_shop');
-    }
-
-    return pending;
-  };
-
-  const pendingMovements = getFilteredPendingMovements();
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -344,6 +355,17 @@ const Index = () => {
         }
     }
   };
+
+  // Final safety check for blank page
+  if (!currentPage && user) {
+    return (
+      <Layout currentPage={getDefaultPage()} onPageChange={setCurrentPage}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
