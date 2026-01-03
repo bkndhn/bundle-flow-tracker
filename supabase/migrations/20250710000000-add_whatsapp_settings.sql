@@ -25,6 +25,10 @@ ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can read settings" ON app_settings
   FOR SELECT USING (true);
 
+-- Allow inserts for upsert operations
+CREATE POLICY "Anyone can insert settings" ON app_settings
+  FOR INSERT WITH CHECK (true);
+
 -- Only allow updates (admin check will be done in app)
 CREATE POLICY "Anyone can update settings" ON app_settings
   FOR UPDATE USING (true);

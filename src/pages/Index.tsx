@@ -24,7 +24,8 @@ const Index = () => {
   // WhatsApp sharing state
   const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings | null>(null);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
-  const [lastDispatchData, setLastDispatchData] = useState<any>(null);
+  const [batchDispatchData, setBatchDispatchData] = useState<any[]>([]);
+  const [dispatchBatchTimeout, setDispatchBatchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Set default page based on user role
   const getDefaultPage = () => {
@@ -199,9 +200,9 @@ const Index = () => {
         console.log('Dispatch successful:', data);
         toast.success('Goods dispatched successfully!');
 
-        // Prepare WhatsApp sharing data
+        // Prepare WhatsApp sharing data - accumulate for batch dispatches
         const selectedStaff = staff.find(s => s.id === movement.sent_by);
-        setLastDispatchData({
+        const dispatchData = {
           item: movement.item,
           bundles_count: movement.bundles_count,
           movement_type: movement.movement_type || 'bundles',
@@ -214,14 +215,25 @@ const Index = () => {
           fare_display_msg: movement.fare_display_msg,
           shirt_bundles: movement.shirt_bundles,
           pant_bundles: movement.pant_bundles,
-        });
+        };
 
-        // Show WhatsApp dialog if enabled
-        const settings = await getWhatsAppSettings();
-        setWhatsAppSettings(settings);
-        if (settings.whatsapp_enabled) {
-          setShowWhatsAppDialog(true);
+        // Add to batch and set/reset timeout to show dialog after all dispatches
+        setBatchDispatchData(prev => [...prev, dispatchData]);
+
+        // Clear existing timeout if any
+        if (dispatchBatchTimeout) {
+          clearTimeout(dispatchBatchTimeout);
         }
+
+        // Set new timeout - this will fire after all dispatches are accumulated
+        const timeout = setTimeout(async () => {
+          const settings = await getWhatsAppSettings();
+          setWhatsAppSettings(settings);
+          if (settings.whatsapp_enabled) {
+            setShowWhatsAppDialog(true);
+          }
+        }, 500);
+        setDispatchBatchTimeout(timeout);
 
         loadData(); // Refresh data after successful dispatch
       }
@@ -409,12 +421,15 @@ const Index = () => {
       </Layout>
 
       {/* WhatsApp Share Dialog */}
-      {whatsAppSettings && lastDispatchData && (
+      {whatsAppSettings && batchDispatchData.length > 0 && (
         <WhatsAppShareDialog
           open={showWhatsAppDialog}
-          onClose={() => setShowWhatsAppDialog(false)}
+          onClose={() => {
+            setShowWhatsAppDialog(false);
+            setBatchDispatchData([]); // Clear batch after closing
+          }}
           settings={whatsAppSettings}
-          dispatchData={lastDispatchData}
+          dispatchData={batchDispatchData.length === 1 ? batchDispatchData[0] : batchDispatchData}
         />
       )}
     </>

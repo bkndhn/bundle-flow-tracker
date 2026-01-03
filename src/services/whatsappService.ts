@@ -190,3 +190,95 @@ export const openWhatsAppGroup = (groupLink: string): void => {
     // On desktop, this will open WhatsApp Web
     window.open(groupLink, '_blank');
 };
+
+// Generate a combined message for batch dispatches (multiple movements at once)
+export const generateBatchWhatsAppMessage = (dispatches: Array<{
+    item: string;
+    bundles_count: number;
+    movement_type: string;
+    source: string;
+    destination: string;
+    auto_name: string;
+    sent_by_name: string;
+    accompanying_person?: string;
+    dispatch_notes?: string;
+    fare_display_msg?: string;
+    shirt_bundles?: number;
+    pant_bundles?: number;
+}>): string => {
+    const locationNames: Record<string, string> = {
+        godown: 'Godown',
+        big_shop: 'Big Shop',
+        small_shop: 'Small Shop',
+    };
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
+    const timeStr = now.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    });
+
+    // Get common data from first dispatch
+    const firstDispatch = dispatches[0];
+    const countLabel = firstDispatch.movement_type === 'pieces' ? 'Pcs' : 'Bundles';
+
+    // Build dispatch details for each destination
+    let dispatchDetails = '';
+    let grandTotalShirt = 0;
+    let grandTotalPant = 0;
+    let grandTotal = 0;
+
+    dispatches.forEach((dispatch, index) => {
+        const shirtCount = dispatch.shirt_bundles || 0;
+        const pantCount = dispatch.pant_bundles || 0;
+        
+        grandTotalShirt += shirtCount;
+        grandTotalPant += pantCount;
+        grandTotal += dispatch.bundles_count;
+
+        dispatchDetails += `
+📍 *To ${locationNames[dispatch.destination] || dispatch.destination}:*
+   👕 Shirt: ${shirtCount} ${countLabel}
+   👖 Pant: ${pantCount} ${countLabel}
+   📊 Subtotal: ${dispatch.bundles_count} ${countLabel}
+`;
+    });
+
+    let message = `🚚 *DISPATCH ALERT*
+━━━━━━━━━━━━━━━━━
+
+📦 *Batch Dispatch Summary*
+${dispatchDetails}
+━━━━━━━━━━━━━━━━━
+📊 *GRAND TOTAL:*
+   👕 Shirt: ${grandTotalShirt} ${countLabel}
+   👖 Pant: ${grandTotalPant} ${countLabel}
+   📦 Total: ${grandTotal} ${countLabel}
+━━━━━━━━━━━━━━━━━
+
+🏭 *From:* ${locationNames[firstDispatch.source] || firstDispatch.source}
+🚗 *Auto:* ${firstDispatch.auto_name}
+👤 *Sent by:* ${firstDispatch.sent_by_name}
+🧑 *Accompanying:* ${firstDispatch.accompanying_person || 'N/A'}`;
+
+    if (firstDispatch.fare_display_msg) {
+        message += `\n💰 *Fare:* ${firstDispatch.fare_display_msg}`;
+    }
+
+    message += `\n📝 *Notes:* ${firstDispatch.dispatch_notes || 'None'}`;
+
+    message += `
+
+⏰ *Dispatched:* ${dateStr}, ${timeStr}
+
+━━━━━━━━━━━━━━━━━
+Please confirm receipt in app ✅`;
+
+    return message;
+};

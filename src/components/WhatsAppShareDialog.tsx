@@ -12,27 +12,32 @@ import { toast } from 'sonner';
 import {
     WhatsAppSettings,
     generateWhatsAppMessage,
+    generateBatchWhatsAppMessage,
     getWhatsAppGroupLink,
     copyToClipboard,
     openWhatsAppGroup,
 } from '@/services/whatsappService';
 
+interface DispatchDataItem {
+    item: string;
+    bundles_count: number;
+    movement_type: string;
+    source: string;
+    destination: string;
+    auto_name: string;
+    sent_by_name: string;
+    accompanying_person?: string;
+    dispatch_notes?: string;
+    fare_display_msg?: string;
+    shirt_bundles?: number;
+    pant_bundles?: number;
+}
+
 interface WhatsAppShareDialogProps {
     open: boolean;
     onClose: () => void;
     settings: WhatsAppSettings;
-    dispatchData: {
-        item: string;
-        bundles_count: number;
-        movement_type: string;
-        source: string;
-        destination: string;
-        auto_name: string;
-        sent_by_name: string;
-        accompanying_person?: string;
-        dispatch_notes?: string;
-        fare_display_msg?: string;
-    };
+    dispatchData: DispatchDataItem | DispatchDataItem[];
 }
 
 export function WhatsAppShareDialog({
@@ -43,8 +48,17 @@ export function WhatsAppShareDialog({
 }: WhatsAppShareDialogProps) {
     const [copied, setCopied] = useState(false);
 
-    const message = generateWhatsAppMessage(dispatchData);
-    const groupLink = getWhatsAppGroupLink(settings, dispatchData.destination);
+    // Handle both single dispatch and batch dispatches
+    const isBatch = Array.isArray(dispatchData);
+    const dispatches = isBatch ? dispatchData : [dispatchData];
+
+    // Generate appropriate message based on batch size
+    const message = dispatches.length > 1
+        ? generateBatchWhatsAppMessage(dispatches)
+        : generateWhatsAppMessage(dispatches[0]);
+
+    // For single group mode, use global group; for multi-group, use first destination
+    const groupLink = getWhatsAppGroupLink(settings, dispatches[0].destination);
 
     const handleCopyAndShare = async () => {
         // Copy message to clipboard
@@ -98,8 +112,8 @@ export function WhatsAppShareDialog({
                     </DialogTitle>
                     <DialogDescription>
                         {settings.whatsapp_mode === 'single'
-                            ? 'Share dispatch details to the team group'
-                            : `Share dispatch details to ${locationNames[dispatchData.destination]} group`}
+                            ? (dispatches.length > 1 ? 'Share batch dispatch to the team group' : 'Share dispatch details to the team group')
+                            : `Share dispatch details to ${locationNames[dispatches[0].destination]} group`}
                     </DialogDescription>
                 </DialogHeader>
 
