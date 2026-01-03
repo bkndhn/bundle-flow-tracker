@@ -12,27 +12,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Safety timeout - never stay loading forever
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn('Auth loading timeout - clearing state');
-        localStorage.removeItem('currentUser');
-        setLoading(false);
-      }
-    }, 5000); // 5 second max loading time
-
-    // Check if user is already logged in
     const initAuth = async () => {
       try {
         const savedUser = localStorage.getItem('currentUser');
+
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
-          await verifySession(parsedUser);
+
+          // IMMEDIATELY set user from localStorage (trust it first)
+          // This prevents logout on slow connections
+          if (isMounted) {
+            setUser(parsedUser);
+            setLoading(false);
+          }
+
+          // Then verify in background (don't block or logout on failure)
+          verifySessionInBackground(parsedUser);
         } else {
           if (isMounted) setLoading(false);
         }
       } catch (e) {
         console.error('Auth init error:', e);
+        // Only clear if JSON parsing fails (corrupt data)
         localStorage.removeItem('currentUser');
         if (isMounted) setLoading(false);
       }
@@ -42,34 +43,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
-      clearTimeout(loadingTimeout);
     };
   }, []);
 
-  const verifySession = async (savedUser: AppUser) => {
+  // Background verification - doesn't block or logout on network errors
+  const verifySessionInBackground = async (savedUser: AppUser) => {
     try {
       const { data, error } = await supabase
         .from('app_users')
-        .select('id, email, role, created_at')
+        .select('id, email, role, created_at, password_hash')
         .eq('id', savedUser.id)
-        .eq('email', savedUser.email)
         .single();
 
-      if (data && !error) {
-        setUser(data as AppUser);
-      } else {
-        // Session invalid, clear it
-        localStorage.removeItem('currentUser');
+      if (error) {
+        // Network error - keep user logged in (offline-friendly)
+        console.warn('Session verification network error, keeping user logged in:', error);
+        return;
+      }
+
+      if (!data) {
+        // User deleted from database - force logout
+        console.warn('User not found in database, logging out');
+        logout();
+        return;
+      }
+
+      // Check if user details changed (email or role)
+      if (data.email !== savedUser.email || data.role !== savedUser.role) {
+        // User details changed, update local storage
+        const updatedUser: AppUser = {
+          id: data.id,
+          email: data.email,
+          role: data.role as AppUser['role'],
+          created_at: data.created_at,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        console.log('User details updated from server');
       }
     } catch (e) {
-      console.error('Session verification error:', e);
-      localStorage.removeItem('currentUser');
-    } finally {
-      setLoading(false);
+      // Network or other error - keep user logged in
+      console.warn('Session verification error, keeping user logged in:', e);
     }
   };
 
-  // Secure password verification using SHA-256 (matching the hash function in UserManagement)
+  // Secure password verification using SHA-256
   const hashPassword = async (password: string): Promise<string> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -80,10 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Hash the provided password to compare with stored hash
       const hashedPassword = await hashPassword(password);
 
-      // Query the database for user with matching email and password hash
       const { data, error } = await supabase
         .from('app_users')
         .select('id, email, role, created_at, password_hash')
@@ -96,17 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Compare password hashes
-      // Support both new SHA-256 hashes and legacy placeholder hashes
       const isValidPassword =
         data.password_hash === hashedPassword ||
-        data.password_hash?.startsWith('$2b$10$'); // Legacy bcrypt placeholder - allow login
+        data.password_hash?.startsWith('$2b$10$'); // Legacy bcrypt placeholder
 
       if (!isValidPassword) {
         console.error('Login failed: Invalid password');
         return false;
       }
 
-      // Create user object without password
       const userWithoutPassword: AppUser = {
         id: data.id,
         email: data.email,
@@ -126,6 +140,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
+  };
+
+  // Force logout - can be called when password is changed
+  const forceLogout = () => {
+    setUser(null);
+    localStorage.removeItem('currentUser');
+    // Clear all session storage too
+    sessionStorage.clear();
   };
 
   return (
