@@ -10,7 +10,7 @@ import { Reports } from '@/components/Reports';
 import { Staff, GoodsMovement } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { initializeNotifications, subscribeToIncomingDispatches } from '@/services/notificationService';
+import { initializeNotifications, subscribeToIncomingDispatches, unsubscribeFromDispatches } from '@/services/notificationService';
 import { WhatsAppShareDialog } from '@/components/WhatsAppShareDialog';
 import { getWhatsAppSettings, WhatsAppSettings } from '@/services/whatsappService';
 
@@ -80,7 +80,7 @@ const Index = () => {
       return () => {
         if (channel) {
           console.log('Unsubscribing from notifications channel');
-          supabase.removeChannel(channel);
+          unsubscribeFromDispatches();
         }
       };
     }

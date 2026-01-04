@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
+import { NotificationStatus } from './NotificationStatus';
 
 interface LayoutProps {
   children: ReactNode;
@@ -110,8 +111,9 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-gray-600 text-sm hidden sm:block">{user?.email}</span>
+            <NotificationStatus userRole={user?.role} userId={user?.id} />
             <Button
               onClick={handleLogoutClick}
               variant="outline"

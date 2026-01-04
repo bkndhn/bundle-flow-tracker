@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: WhatsAppSettings = {
 export const getWhatsAppSettings = async (): Promise<WhatsAppSettings> => {
     try {
         const { data, error } = await supabase
-            .from('app_settings')
+            .from('app_settings' as any)
             .select('setting_key, setting_value');
 
         if (error) {
@@ -51,7 +51,7 @@ export const getWhatsAppSettings = async (): Promise<WhatsAppSettings> => {
 export const updateWhatsAppSetting = async (key: string, value: string): Promise<boolean> => {
     try {
         const { error } = await supabase
-            .from('app_settings')
+            .from('app_settings' as any)
             .upsert({
                 setting_key: key,
                 setting_value: value,
@@ -132,7 +132,7 @@ ${itemDetails}
 🧑 *Accompanying:* ${dispatchData.accompanying_person || 'N/A'}`;
 
     if (dispatchData.fare_display_msg) {
-        message += `\n💰 *Fare:* ${dispatchData.fare_display_msg}`;
+        message += `\n💰 *${dispatchData.fare_display_msg}*`;
     }
 
     message += `\n📝 *Notes:* ${dispatchData.dispatch_notes || 'None'}`;
@@ -237,7 +237,7 @@ export const generateBatchWhatsAppMessage = (dispatches: Array<{
     dispatches.forEach((dispatch, index) => {
         const shirtCount = dispatch.shirt_bundles || 0;
         const pantCount = dispatch.pant_bundles || 0;
-        
+
         grandTotalShirt += shirtCount;
         grandTotalPant += pantCount;
         grandTotal += dispatch.bundles_count;
@@ -268,7 +268,7 @@ ${dispatchDetails}
 🧑 *Accompanying:* ${firstDispatch.accompanying_person || 'N/A'}`;
 
     if (firstDispatch.fare_display_msg) {
-        message += `\n💰 *Fare:* ${firstDispatch.fare_display_msg}`;
+        message += `\n💰 *${firstDispatch.fare_display_msg}*`;
     }
 
     message += `\n📝 *Notes:* ${firstDispatch.dispatch_notes || 'None'}`;
