@@ -275,7 +275,7 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
                 let shouldNotify = false;
                 const dest = newMovement.destination;
 
-                // Role-based notification logic
+                // Role-based notification logic for dispatches
                 if (userRole === 'admin') {
                     shouldNotify = true;
                 } else if (userRole === 'big_shop_manager' && (dest === 'big_shop' || dest === 'both')) {
@@ -309,6 +309,69 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
                 }
             }
         )
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'goods_movements'
+            },
+            async (payload) => {
+                log('Movement updated via Realtime:', payload);
+                const updatedMovement = payload.new;
+                const oldMovement = payload.old;
+
+                // Only notify when status changes to 'received' (goods arrived)
+                if (oldMovement.status === 'dispatched' && updatedMovement.status === 'received') {
+                    let shouldNotify = false;
+                    const source = updatedMovement.source || 'godown';
+                    const dest = updatedMovement.destination;
+
+                    // Role-based notification logic for arrivals
+                    if (userRole === 'admin') {
+                        // Admin gets all arrival notifications
+                        shouldNotify = true;
+                    } else if (userRole === 'godown_manager' && source === 'godown') {
+                        // Godown manager gets notified when goods they sent are received
+                        shouldNotify = true;
+                    } else if (userRole === 'big_shop_manager') {
+                        // Big shop manager gets notified when:
+                        // - Goods they sent are received (source is big_shop)
+                        // - OR goods arrived at their shop (dest is big_shop)
+                        shouldNotify = source === 'big_shop' || dest === 'big_shop';
+                    } else if (userRole === 'small_shop_manager') {
+                        // Small shop manager gets notified when:
+                        // - Goods they sent are received (source is small_shop)
+                        // - OR goods arrived at their shop (dest is small_shop)
+                        shouldNotify = source === 'small_shop' || dest === 'small_shop';
+                    }
+
+                    if (shouldNotify) {
+                        const locationNames: Record<string, string> = {
+                            godown: 'Godown',
+                            big_shop: 'Big Shop',
+                            small_shop: 'Small Shop',
+                        };
+
+                        const itemDisplay = updatedMovement.item.charAt(0).toUpperCase() + updatedMovement.item.slice(1);
+                        const title = '✅ Goods Arrived!';
+                        const body = `${itemDisplay} (${updatedMovement.bundles_count} units) received at ${locationNames[dest] || dest}.`;
+
+                        await showNotification(title, {
+                            body,
+                            tag: `arrival-${updatedMovement.id}`,
+                            data: {
+                                type: 'arrival',
+                                url: '/reports',
+                                movementId: updatedMovement.id
+                            }
+                        });
+                    } else {
+                        log('Arrival notification skipped - not for this user role');
+                    }
+                }
+            }
+        )
         .on('system', { event: '*' }, (status) => {
             log('Channel system event:', status);
         })
@@ -316,7 +379,7 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
             isSubscribing = false;
 
             if (status === 'SUBSCRIBED') {
-                log('Successfully subscribed to dispatch notifications');
+                log('Successfully subscribed to dispatch & arrival notifications');
                 reconnectAttempts = 0;
                 // Connection established silently - no toast needed
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
