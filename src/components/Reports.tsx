@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Download, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { DateFilter } from './reports/DateFilter';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ReportsProps {
   movements: GoodsMovement[];
@@ -149,10 +151,9 @@ export function Reports({ movements }: ReportsProps) {
     );
   };
 
-  // Export to Excel function
-  const exportToExcel = () => {
-    // Use all filtered data, not just paginated
-    const exportData = filteredMovements.map(movement => ({
+  // Define export columns - add any new columns here and they will be exported to both PDF and Excel
+  const getExportData = () => {
+    return filteredMovements.map(movement => ({
       'Dispatch Date': formatDateTime(movement.dispatch_date),
       'Item': movement.item.charAt(0).toUpperCase() + movement.item.slice(1),
       'Movement Type': movement.movement_type || 'bundles',
@@ -170,7 +171,12 @@ export function Reports({ movements }: ReportsProps) {
       'Dispatch Notes': movement.dispatch_notes || movement.condition_notes || '',
       'Receive Notes': movement.receive_notes || ''
     }));
+  };
 
+  // Export to Excel function
+  const exportToExcel = () => {
+    const exportData = getExportData();
+    
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
 
@@ -193,6 +199,63 @@ export function Reports({ movements }: ReportsProps) {
 
     // Download file
     XLSX.writeFile(wb, fileName);
+  };
+
+  // Export to PDF function
+  const exportToPDF = () => {
+    const exportData = getExportData();
+    
+    if (exportData.length === 0) return;
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Goods Movement Report', 14, 15);
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 14, 22);
+
+    // Get column headers dynamically from the first row
+    const headers = Object.keys(exportData[0]);
+    
+    // Convert data to array format for autoTable
+    const tableData = exportData.map(row => 
+      headers.map(header => String((row as any)[header] || ''))
+    );
+
+    // Generate table
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 28,
+      styles: {
+        fontSize: 7,
+        cellPadding: 1.5,
+      },
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 7,
+      },
+      alternateRowStyles: {
+        fillColor: [245, 247, 250]
+      },
+      margin: { left: 5, right: 5 },
+      tableWidth: 'auto',
+    });
+
+    // Generate filename with date
+    const fileName = `goods_movements_report_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.pdf`;
+
+    // Download file
+    doc.save(fileName);
   };
 
   return (
@@ -268,16 +331,28 @@ export function Reports({ movements }: ReportsProps) {
                 </SelectContent>
               </Select>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="col-span-2 h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 lg:flex-1"
-                onClick={exportToExcel}
-                disabled={filteredMovements.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+              <div className="flex gap-2 col-span-2 lg:col-span-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-9 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                  onClick={exportToPDF}
+                  disabled={filteredMovements.length === 0}
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                  onClick={exportToExcel}
+                  disabled={filteredMovements.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Excel
+                </Button>
+              </div>
             </div>
           </div>
 
