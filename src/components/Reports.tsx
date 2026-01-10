@@ -173,6 +173,50 @@ export function Reports({ movements }: ReportsProps) {
     }));
   };
 
+  // Get date range string for filename based on current filter
+  const getDateRangeForFilename = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    switch (dateFilter.type) {
+      case 'today':
+        return today;
+      case 'yesterday': {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return format(yesterday, 'yyyy-MM-dd');
+      }
+      case 'this_week': {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        return `${format(monday, 'yyyy-MM-dd')}_to_${today}`;
+      }
+      case 'this_month': {
+        const firstOfMonth = new Date();
+        firstOfMonth.setDate(1);
+        return `${format(firstOfMonth, 'yyyy-MM-dd')}_to_${today}`;
+      }
+      case 'this_year': {
+        const firstOfYear = new Date();
+        firstOfYear.setMonth(0, 1);
+        return `${format(firstOfYear, 'yyyy-MM-dd')}_to_${today}`;
+      }
+      case 'custom':
+        if (dateFilter.startDate && dateFilter.endDate) {
+          return dateFilter.startDate === dateFilter.endDate 
+            ? dateFilter.startDate 
+            : `${dateFilter.startDate}_to_${dateFilter.endDate}`;
+        }
+        return today;
+      case 'all':
+        return 'all_time';
+      default:
+        return today;
+    }
+  };
+
   // Export to Excel function
   const exportToExcel = () => {
     const exportData = getExportData();
@@ -194,8 +238,9 @@ export function Reports({ movements }: ReportsProps) {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Movements Report');
 
-    // Generate filename with date
-    const fileName = `goods_movements_report_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.xlsx`;
+    // Generate filename with date range
+    const dateRange = getDateRangeForFilename();
+    const fileName = `goods_movements_${dateRange}.xlsx`;
 
     // Download file
     XLSX.writeFile(wb, fileName);
@@ -251,8 +296,9 @@ export function Reports({ movements }: ReportsProps) {
       tableWidth: 'auto',
     });
 
-    // Generate filename with date
-    const fileName = `goods_movements_report_${format(new Date(), 'yyyy-MM-dd_HH-mm')}.pdf`;
+    // Generate filename with date range
+    const dateRange = getDateRangeForFilename();
+    const fileName = `goods_movements_${dateRange}.pdf`;
 
     // Download file
     doc.save(fileName);
