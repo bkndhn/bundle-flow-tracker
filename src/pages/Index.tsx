@@ -16,7 +16,16 @@ import { getWhatsAppSettings, WhatsAppSettings } from '@/services/whatsappServic
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState('');
+  // Persist current page in sessionStorage to maintain state on refresh
+  const [currentPage, setCurrentPage] = useState(() => {
+    return sessionStorage.getItem('currentPage') || '';
+  });
+
+  // Update sessionStorage when page changes
+  const handlePageChange = (page: string) => {
+    sessionStorage.setItem('currentPage', page);
+    setCurrentPage(page);
+  };
   const [staff, setStaff] = useState<Staff[]>([]);
   const [movements, setMovements] = useState<GoodsMovement[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -405,7 +414,7 @@ const Index = () => {
   // Final safety check for blank page
   if (!currentPage && user) {
     return (
-      <Layout currentPage={getDefaultPage()} onPageChange={setCurrentPage}>
+      <Layout currentPage={getDefaultPage()} onPageChange={handlePageChange}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -415,7 +424,7 @@ const Index = () => {
 
   return (
     <>
-      <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+      <Layout currentPage={currentPage} onPageChange={handlePageChange}>
         {renderCurrentPage()}
       </Layout>
 
