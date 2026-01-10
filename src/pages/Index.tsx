@@ -53,8 +53,7 @@ const Index = () => {
       if (user?.role === 'big_shop_manager' && m.destination === 'big_shop') return true;
       if (user?.role === 'small_shop_manager' && m.destination === 'small_shop') return true;
 
-      // Also handle 'both' if applicable (though currently dispatches to 'both' are split into two movements)
-      if (m.destination === 'both' && (user?.role === 'big_shop_manager' || user?.role === 'small_shop_manager')) return true;
+      // Note: 'both' destination is split into separate movements at dispatch time, so no need to handle here
 
       return false;
     });

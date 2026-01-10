@@ -7,13 +7,37 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           created_at: string | null
@@ -45,19 +69,23 @@ export type Database = {
           bundles_count: number
           condition_notes: string | null
           created_at: string | null
-          destination: Database["public"]["Enums"]["destination_type"]
+          destination: string
           dispatch_date: string
+          dispatch_notes: string | null
           fare_display_msg: string | null
           fare_payee_tag: string | null
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id: string
           item: string
           item_summary_display: string | null
+          movement_type: string | null
           pant_bundles: number | null
+          receive_notes: string | null
           received_at: string | null
           received_by: string | null
           sent_by: string
           shirt_bundles: number | null
+          source: string | null
           status: Database["public"]["Enums"]["movement_status"]
           updated_at: string | null
         }
@@ -67,19 +95,23 @@ export type Database = {
           bundles_count: number
           condition_notes?: string | null
           created_at?: string | null
-          destination: Database["public"]["Enums"]["destination_type"]
+          destination: string
           dispatch_date: string
+          dispatch_notes?: string | null
           fare_display_msg?: string | null
           fare_payee_tag?: string | null
           fare_payment: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
           item?: string
           item_summary_display?: string | null
+          movement_type?: string | null
           pant_bundles?: number | null
+          receive_notes?: string | null
           received_at?: string | null
           received_by?: string | null
           sent_by: string
           shirt_bundles?: number | null
+          source?: string | null
           status?: Database["public"]["Enums"]["movement_status"]
           updated_at?: string | null
         }
@@ -89,19 +121,23 @@ export type Database = {
           bundles_count?: number
           condition_notes?: string | null
           created_at?: string | null
-          destination?: Database["public"]["Enums"]["destination_type"]
+          destination?: string
           dispatch_date?: string
+          dispatch_notes?: string | null
           fare_display_msg?: string | null
           fare_payee_tag?: string | null
           fare_payment?: Database["public"]["Enums"]["fare_payment_type"]
           id?: string
           item?: string
           item_summary_display?: string | null
+          movement_type?: string | null
           pant_bundles?: number | null
+          receive_notes?: string | null
           received_at?: string | null
           received_by?: string | null
           sent_by?: string
           shirt_bundles?: number | null
+          source?: string | null
           status?: Database["public"]["Enums"]["movement_status"]
           updated_at?: string | null
         }
