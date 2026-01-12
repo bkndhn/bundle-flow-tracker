@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Truck, Package, Users, BarChart3, FileText, LogOut } from 'lucide-react';
+import { Truck, Package, Users, BarChart3, FileText, LogOut, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
       case 'admin':
         return [
           ...baseNav,
+          { id: 'analytics', label: 'Analytics', icon: TrendingUp },
           { id: 'dispatch', label: 'Dispatch', icon: Truck },
           { id: 'receive', label: 'Receive', icon: Package },
           { id: 'reports', label: 'Reports', icon: FileText },
@@ -134,7 +135,7 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-sm bg-white/80 border-t border-white/30">
-        <div className={`grid gap-1 ${navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : navigation.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className={`grid gap-1 ${navigation.length === 6 ? 'grid-cols-6' : navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : navigation.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;

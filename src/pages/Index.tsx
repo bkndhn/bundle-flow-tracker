@@ -7,6 +7,7 @@ import { DispatchForm } from '@/components/DispatchForm';
 import { ReceiveForm } from '@/components/ReceiveForm';
 import { StaffManagement } from '@/components/StaffManagement';
 import { Reports } from '@/components/Reports';
+import { Analytics } from '@/components/Analytics';
 import { Staff, GoodsMovement } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -382,6 +383,15 @@ const Index = () => {
           );
         }
         return <Dashboard movements={movements} />;
+      case 'analytics':
+        if (user.role !== 'admin') {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-gray-600">Access denied. Analytics is only available for administrators.</p>
+            </div>
+          );
+        }
+        return <Analytics movements={movements} />;
       case 'dispatch':
         return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} />;
       case 'receive':
