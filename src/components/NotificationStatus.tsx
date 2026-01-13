@@ -93,12 +93,22 @@ export function NotificationStatus({ userRole, userId }: NotificationStatusProps
 
     // Determine icon and color based on status
     const getStatusInfo = () => {
+        // When push notifications aren't supported, we still support in-app realtime alerts.
         if (permission === 'unsupported') {
+            if (connectionStatus === 'SUBSCRIBED') {
+                return {
+                    icon: BellRing,
+                    color: 'text-green-500',
+                    bgColor: 'bg-green-50',
+                    label: 'In-app alerts active (push not supported)'
+                };
+            }
+
             return {
-                icon: BellOff,
-                color: 'text-gray-400',
-                bgColor: 'bg-gray-100',
-                label: 'Notifications not supported'
+                icon: WifiOff,
+                color: 'text-orange-500',
+                bgColor: 'bg-orange-50',
+                label: 'In-app alerts disconnected'
             };
         }
 
@@ -121,7 +131,7 @@ export function NotificationStatus({ userRole, userId }: NotificationStatusProps
         }
 
         // Permission granted - check connection
-        if (connectionStatus === 'disconnected' || connectionStatus === 'unknown') {
+        if (connectionStatus === 'disconnected' || connectionStatus === 'unknown' || connectionStatus === 'CLOSED') {
             return {
                 icon: WifiOff,
                 color: 'text-orange-500',
