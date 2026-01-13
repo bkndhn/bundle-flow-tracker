@@ -1,21 +1,47 @@
-
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { GoodsMovement } from '@/types';
-import { Package, Truck, CheckCircle, Clock, TrendingUp, Shirt } from 'lucide-react';
+import { Package, Truck, CheckCircle, TrendingUp, Shirt } from 'lucide-react';
 
 interface DashboardProps {
   movements: GoodsMovement[];
 }
 
-export function Dashboard({ movements }: DashboardProps) {
+// Memoized stat card component
+const StatCard = memo(function StatCard({ 
+  label, 
+  value, 
+  icon: Icon, 
+  iconColor = 'text-white/60' 
+}: { 
+  label: string; 
+  value: number | string; 
+  icon: React.ComponentType<{ className?: string }>; 
+  iconColor?: string;
+}) {
+  return (
+    <Card className="backdrop-blur-xl bg-white/10 border-white/20">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white/80 text-sm">{label}</p>
+            <p className="text-white text-2xl font-bold">{value}</p>
+          </div>
+          <Icon className={`h-8 w-8 ${iconColor}`} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) {
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [itemFilter, setItemFilter] = useState<string>('all');
   const [movementTypeFilter, setMovementTypeFilter] = useState<string>('all');
 
-  const filterMovements = (movements: GoodsMovement[]) => {
+  const filteredMovements = useMemo(() => {
     return movements.filter(movement => {
       const locationMatch = locationFilter === 'all' || movement.destination === locationFilter;
       const itemMatch = itemFilter === 'all' || movement.item === itemFilter;
@@ -25,11 +51,9 @@ export function Dashboard({ movements }: DashboardProps) {
         (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
       return locationMatch && itemMatch && movementTypeMatch;
     });
-  };
+  }, [movements, locationFilter, itemFilter, movementTypeFilter]);
 
-  const filteredMovements = filterMovements(movements);
-
-  const getStats = () => {
+  const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -58,9 +82,9 @@ export function Dashboard({ movements }: DashboardProps) {
       month: monthMovements.length,
       totalQuantity: filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)
     };
-  };
+  }, [filteredMovements]);
 
-  const getItemStats = () => {
+  const itemStats = useMemo(() => {
     const shirtCount = filteredMovements
       .filter(m => m.item === 'shirt')
       .reduce((sum, m) => sum + m.bundles_count, 0);
@@ -78,9 +102,9 @@ export function Dashboard({ movements }: DashboardProps) {
       shirt: shirtCount + bothShirtCount,
       pant: pantCount + bothPantCount
     };
-  };
+  }, [filteredMovements]);
 
-  const getLocationStats = () => {
+  const locationStats = useMemo(() => {
     const bigShopCount = filteredMovements
       .filter(m => m.destination === 'big_shop')
       .reduce((sum, m) => sum + m.bundles_count, 0);
@@ -88,11 +112,7 @@ export function Dashboard({ movements }: DashboardProps) {
       .filter(m => m.destination === 'small_shop')
       .reduce((sum, m) => sum + m.bundles_count, 0);
     return { big_shop: bigShopCount, small_shop: smallShopCount };
-  };
-
-  const stats = getStats();
-  const itemStats = getItemStats();
-  const locationStats = getLocationStats();
+  }, [filteredMovements]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 space-y-6">
@@ -149,50 +169,10 @@ export function Dashboard({ movements }: DashboardProps) {
       <div className="space-y-8">
         {/* Overall Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/80 text-sm">Combined Volume</p>
-                  <p className="text-white text-2xl font-bold">{stats.totalQuantity}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-white/60" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/80 text-sm">Movements</p>
-                  <p className="text-white text-2xl font-bold">{stats.total}</p>
-                </div>
-                <Package className="h-8 w-8 text-white/60" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/80 text-sm">Dispatched</p>
-                  <p className="text-white text-2xl font-bold">{stats.dispatched}</p>
-                </div>
-                <Truck className="h-8 w-8 text-orange-400" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/80 text-sm">Received</p>
-                  <p className="text-white text-2xl font-bold">{stats.received}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard label="Combined Volume" value={stats.totalQuantity} icon={TrendingUp} />
+          <StatCard label="Movements" value={stats.total} icon={Package} />
+          <StatCard label="Dispatched" value={stats.dispatched} icon={Truck} iconColor="text-orange-400" />
+          <StatCard label="Received" value={stats.received} icon={CheckCircle} iconColor="text-green-400" />
         </div>
 
         {/* Sections for Bundles and Pieces */}
@@ -279,4 +259,4 @@ export function Dashboard({ movements }: DashboardProps) {
       </div>
     </div>
   );
-}
+});
