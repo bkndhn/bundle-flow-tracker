@@ -8,12 +8,18 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 // Connection state tracking
 let currentChannel: RealtimeChannel | null = null;
+let currentChannelStatus: string = 'disconnected';
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 3000;
 let isSubscribing = false;
-let lastNotificationTime = 0;
-const NOTIFICATION_DEBOUNCE_MS = 2000;
+
+// Notification de-dupe (avoid duplicates for same movement, but allow rapid different events)
+const recentTags = new Map<string, number>();
+const TAG_DEBOUNCE_MS = 2000;
+
+// Connection monitor cleanup
+let detachConnectionMonitors: (() => void) | null = null;
 
 // Debug logging
 const DEBUG = true;
@@ -125,13 +131,20 @@ export const showNotification = async (
 ): Promise<boolean> => {
     log('Attempting to show notification:', title);
 
-    // Debounce rapid notifications
-    const now = Date.now();
-    if (now - lastNotificationTime < NOTIFICATION_DEBOUNCE_MS) {
-        log('Notification debounced');
-        return false;
+    const effectiveTag = options.tag || (options.data?.type && options.data?.movementId
+        ? `${options.data.type}-${options.data.movementId}`
+        : undefined);
+
+    // De-dupe only identical notifications (same tag) within a short window
+    if (effectiveTag) {
+        const now = Date.now();
+        const last = recentTags.get(effectiveTag) || 0;
+        if (now - last < TAG_DEBOUNCE_MS) {
+            log('Notification skipped (duplicate tag debounce):', effectiveTag);
+            return false;
+        }
+        recentTags.set(effectiveTag, now);
     }
-    lastNotificationTime = now;
 
     let notificationShown = false;
 
@@ -200,11 +213,7 @@ export const showNotification = async (
  * Check real-time connection status
  */
 export const getConnectionStatus = (): string => {
-    if (!currentChannel) {
-        return 'disconnected';
-    }
-    // @ts-ignore - accessing internal state
-    return currentChannel.state || 'unknown';
+    return currentChannelStatus;
 };
 
 /**
@@ -231,10 +240,8 @@ export const forceReconnect = async (userRole: string, userId: string): Promise<
  * Subscribe to real-time dispatches with improved reliability
  */
 export const subscribeToIncomingDispatches = (userRole: string, currentUserId: string): RealtimeChannel | null => {
-    if (!isNotificationSupported()) {
-        log('Notifications not supported, skipping subscription');
-        return null;
-    }
+    // NOTE: Realtime subscription powers in-app alerts across devices.
+    // Do NOT gate this on browser push notification support.
 
     // Prevent duplicate subscriptions
     if (isSubscribing) {
@@ -249,8 +256,36 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
         currentChannel = null;
     }
 
+    // Detach previous monitors
+    if (detachConnectionMonitors) {
+        detachConnectionMonitors();
+        detachConnectionMonitors = null;
+    }
+
     isSubscribing = true;
+    currentChannelStatus = 'connecting';
     log(`Setting up Realtime notifications for role: ${userRole}`);
+
+    // Auto-reconnect when network returns / app becomes visible
+    const maybeReconnect = () => {
+        if (!currentChannel) return;
+        if (currentChannelStatus === 'SUBSCRIBED') return;
+        if (isSubscribing) return;
+        log('Connection monitor triggered reconnect');
+        void forceReconnect(userRole, currentUserId);
+    };
+
+    const onOnline = () => maybeReconnect();
+    const onVisibility = () => {
+        if (document.visibilityState === 'visible') maybeReconnect();
+    };
+
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibility);
+    detachConnectionMonitors = () => {
+        window.removeEventListener('online', onOnline);
+        document.removeEventListener('visibilitychange', onVisibility);
+    };
 
     const channelName = `dispatch-notifications-${currentUserId}-${Date.now()}`;
 
@@ -298,6 +333,7 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
 
                     await showNotification(title, {
                         body,
+                        tag: `dispatch-${newMovement.id}`,
                         data: {
                             type: 'dispatch',
                             url: '/receive',
@@ -377,6 +413,7 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
         })
         .subscribe((status, err) => {
             isSubscribing = false;
+            currentChannelStatus = status;
 
             if (status === 'SUBSCRIBED') {
                 log('Successfully subscribed to dispatch & arrival notifications');
@@ -409,11 +446,18 @@ export const subscribeToIncomingDispatches = (userRole: string, currentUserId: s
  * Unsubscribe from real-time notifications
  */
 export const unsubscribeFromDispatches = async (): Promise<void> => {
+    if (detachConnectionMonitors) {
+        detachConnectionMonitors();
+        detachConnectionMonitors = null;
+    }
+
     if (currentChannel) {
         log('Unsubscribing from dispatch notifications');
         await supabase.removeChannel(currentChannel);
         currentChannel = null;
     }
+
+    currentChannelStatus = 'disconnected';
 };
 
 // Initialize notifications on app load
