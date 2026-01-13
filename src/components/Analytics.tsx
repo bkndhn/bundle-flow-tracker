@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { GoodsMovement } from '@/types';
 import { 
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, getHours, parseISO, addDays } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, getHours, parseISO, addDays, isWithinInterval } from 'date-fns';
 import { TrendingUp, Clock, Package, Target, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { AnalyticsDateFilter, DateRange } from './analytics/AnalyticsDateFilter';
+import { ItemWiseCharts } from './analytics/ItemWiseCharts';
 
 interface AnalyticsProps {
   movements: GoodsMovement[];
@@ -22,19 +24,84 @@ const CHART_COLORS = {
   small_shop: 'hsl(142, 76%, 36%)',
 };
 
-export function Analytics({ movements }: AnalyticsProps) {
-  // Calculate movement trends (last 30 days)
+// Helper to format hour in 12-hour format
+const formatHour12 = (hour: number): string => {
+  if (hour === 0) return '12 AM';
+  if (hour === 12) return '12 PM';
+  if (hour < 12) return `${hour} AM`;
+  return `${hour - 12} PM`;
+};
+
+// Memoized summary card component
+const SummaryCard = memo(function SummaryCard({ 
+  title, 
+  value, 
+  subtitle, 
+  change, 
+  gradient, 
+  icon: Icon 
+}: { 
+  title: string; 
+  value: string | number; 
+  subtitle: string; 
+  change?: number; 
+  gradient: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card className={`${gradient} text-white border-0`}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white/80 text-xs font-medium">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-white/80 text-xs">{subtitle}</p>
+          </div>
+          {change !== undefined ? (
+            <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+              {change >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+              {Math.abs(change)}%
+            </div>
+          ) : Icon ? (
+            <Icon className="h-8 w-8 text-white/60" />
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) {
+  // Date range state - default to last 30 days
+  const [dateRange, setDateRange] = useState<DateRange>(() => ({
+    from: startOfDay(subDays(new Date(), 29)),
+    to: endOfDay(new Date()),
+  }));
+
+  // Item-wise chart filters
+  const [metricFilter, setMetricFilter] = useState<'bundles' | 'pieces' | 'all'>('all');
+  const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant'>('all');
+
+  // Filter movements by date range
+  const filteredMovements = useMemo(() => {
+    return movements.filter(m => {
+      const dispatchDate = parseISO(m.dispatch_date);
+      return isWithinInterval(dispatchDate, { start: dateRange.from, end: dateRange.to });
+    });
+  }, [movements, dateRange]);
+
+  // Calculate movement trends within date range
   const movementTrends = useMemo(() => {
-    const last30Days = eachDayOfInterval({
-      start: subDays(new Date(), 29),
-      end: new Date(),
+    const days = eachDayOfInterval({
+      start: dateRange.from,
+      end: dateRange.to,
     });
 
-    return last30Days.map(day => {
+    return days.map(day => {
       const dayStart = startOfDay(day);
       const dayEnd = endOfDay(day);
       
-      const dayMovements = movements.filter(m => {
+      const dayMovements = filteredMovements.filter(m => {
         const dispatchDate = parseISO(m.dispatch_date);
         return dispatchDate >= dayStart && dispatchDate <= dayEnd;
       });
@@ -52,9 +119,9 @@ export function Analytics({ movements }: AnalyticsProps) {
         received,
       };
     });
-  }, [movements]);
+  }, [filteredMovements, dateRange]);
 
-  // Calculate peak hours analysis
+  // Calculate peak hours analysis with 12-hour format
   const peakHoursData = useMemo(() => {
     const hourlyData: { [key: number]: { dispatches: number; receives: number; bundles: number } } = {};
     
@@ -63,7 +130,7 @@ export function Analytics({ movements }: AnalyticsProps) {
       hourlyData[i] = { dispatches: 0, receives: 0, bundles: 0 };
     }
 
-    movements.forEach(m => {
+    filteredMovements.forEach(m => {
       const dispatchHour = getHours(parseISO(m.dispatch_date));
       hourlyData[dispatchHour].dispatches++;
       hourlyData[dispatchHour].bundles += m.bundles_count;
@@ -75,11 +142,11 @@ export function Analytics({ movements }: AnalyticsProps) {
     });
 
     return Object.entries(hourlyData).map(([hour, data]) => ({
-      hour: `${hour.toString().padStart(2, '0')}:00`,
+      hour: formatHour12(parseInt(hour)),
       hourNum: parseInt(hour),
       ...data,
     }));
-  }, [movements]);
+  }, [filteredMovements]);
 
   // Find peak dispatch hour
   const peakDispatchHour = useMemo(() => {
@@ -89,8 +156,8 @@ export function Analytics({ movements }: AnalyticsProps) {
 
   // Calculate destination distribution
   const destinationData = useMemo(() => {
-    const bigShop = movements.filter(m => m.destination === 'big_shop');
-    const smallShop = movements.filter(m => m.destination === 'small_shop');
+    const bigShop = filteredMovements.filter(m => m.destination === 'big_shop');
+    const smallShop = filteredMovements.filter(m => m.destination === 'small_shop');
 
     return [
       { 
@@ -106,18 +173,20 @@ export function Analytics({ movements }: AnalyticsProps) {
         color: CHART_COLORS.small_shop
       },
     ];
-  }, [movements]);
+  }, [filteredMovements]);
 
   // Calculate bundle volume forecasting (simple moving average)
   const forecastData = useMemo(() => {
     const last14Days = movementTrends.slice(-14);
+    if (last14Days.length === 0) return [];
+    
     const avgBundles = last14Days.reduce((sum, d) => sum + d.bundles, 0) / last14Days.length;
     
     // Calculate trend
-    const firstHalf = last14Days.slice(0, 7);
-    const secondHalf = last14Days.slice(7);
-    const firstAvg = firstHalf.reduce((sum, d) => sum + d.bundles, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, d) => sum + d.bundles, 0) / secondHalf.length;
+    const firstHalf = last14Days.slice(0, Math.floor(last14Days.length / 2));
+    const secondHalf = last14Days.slice(Math.floor(last14Days.length / 2));
+    const firstAvg = firstHalf.length ? firstHalf.reduce((sum, d) => sum + d.bundles, 0) / firstHalf.length : 0;
+    const secondAvg = secondHalf.length ? secondHalf.reduce((sum, d) => sum + d.bundles, 0) / secondHalf.length : 0;
     const trendMultiplier = secondAvg > 0 ? (secondAvg - firstAvg) / secondAvg : 0;
 
     // Generate forecast for next 7 days
@@ -134,7 +203,7 @@ export function Analytics({ movements }: AnalyticsProps) {
     }
 
     // Combine historical and forecast data
-    const historical = movementTrends.slice(-14).map(d => ({
+    const historical = last14Days.map(d => ({
       date: d.date,
       bundles: d.bundles,
       forecast: null,
@@ -144,113 +213,93 @@ export function Analytics({ movements }: AnalyticsProps) {
     return [...historical, ...forecast];
   }, [movementTrends]);
 
-  // Calculate weekly comparison
-  const weeklyComparison = useMemo(() => {
-    const thisWeek = movementTrends.slice(-7);
-    const lastWeek = movementTrends.slice(-14, -7);
-
-    const thisWeekBundles = thisWeek.reduce((sum, d) => sum + d.bundles, 0);
-    const lastWeekBundles = lastWeek.reduce((sum, d) => sum + d.bundles, 0);
+  // Calculate comparison with previous period
+  const periodComparison = useMemo(() => {
+    const periodLength = movementTrends.length;
+    const halfLength = Math.floor(periodLength / 2);
     
-    const thisWeekDispatches = thisWeek.reduce((sum, d) => sum + d.dispatches, 0);
-    const lastWeekDispatches = lastWeek.reduce((sum, d) => sum + d.dispatches, 0);
+    const currentPeriod = movementTrends.slice(-halfLength);
+    const previousPeriod = movementTrends.slice(-periodLength, -halfLength);
 
-    const bundleChange = lastWeekBundles > 0 
-      ? ((thisWeekBundles - lastWeekBundles) / lastWeekBundles * 100).toFixed(1)
-      : '0';
+    const currentBundles = currentPeriod.reduce((sum, d) => sum + d.bundles, 0);
+    const previousBundles = previousPeriod.reduce((sum, d) => sum + d.bundles, 0);
     
-    const dispatchChange = lastWeekDispatches > 0
-      ? ((thisWeekDispatches - lastWeekDispatches) / lastWeekDispatches * 100).toFixed(1)
-      : '0';
+    const currentDispatches = currentPeriod.reduce((sum, d) => sum + d.dispatches, 0);
+    const previousDispatches = previousPeriod.reduce((sum, d) => sum + d.dispatches, 0);
+
+    const bundleChange = previousBundles > 0 
+      ? ((currentBundles - previousBundles) / previousBundles * 100)
+      : 0;
+    
+    const dispatchChange = previousDispatches > 0
+      ? ((currentDispatches - previousDispatches) / previousDispatches * 100)
+      : 0;
 
     return {
-      thisWeekBundles,
-      lastWeekBundles,
-      thisWeekDispatches,
-      lastWeekDispatches,
-      bundleChange: parseFloat(bundleChange),
-      dispatchChange: parseFloat(dispatchChange),
+      currentBundles,
+      previousBundles,
+      currentDispatches,
+      previousDispatches,
+      bundleChange: parseFloat(bundleChange.toFixed(1)),
+      dispatchChange: parseFloat(dispatchChange.toFixed(1)),
     };
   }, [movementTrends]);
 
-  // Item type distribution
-  const itemTypeData = useMemo(() => {
-    const shirts = movements.filter(m => m.item === 'shirt');
-    const pants = movements.filter(m => m.item === 'pant');
-    const both = movements.filter(m => m.item === 'both');
+  // Callbacks for filter changes
+  const handleDateRangeChange = useCallback((range: DateRange) => {
+    setDateRange(range);
+  }, []);
 
-    return [
-      { name: 'Shirts', value: shirts.length, bundles: shirts.reduce((sum, m) => sum + (m.shirt_bundles || m.bundles_count), 0) },
-      { name: 'Pants', value: pants.length, bundles: pants.reduce((sum, m) => sum + (m.pant_bundles || m.bundles_count), 0) },
-      { name: 'Both', value: both.length, bundles: both.reduce((sum, m) => sum + m.bundles_count, 0) },
-    ].filter(item => item.value > 0);
-  }, [movements]);
+  const handleMetricFilterChange = useCallback((value: 'bundles' | 'pieces' | 'all') => {
+    setMetricFilter(value);
+  }, []);
 
-  const ITEM_COLORS = ['#3b82f6', '#22c55e', '#a855f7'];
+  const handleItemFilterChange = useCallback((value: 'all' | 'shirt' | 'pant') => {
+    setItemFilter(value);
+  }, []);
+
+  const avgDailyBundles = movementTrends.length > 0 
+    ? Math.round(movementTrends.reduce((sum, d) => sum + d.bundles, 0) / movementTrends.length)
+    : 0;
 
   return (
     <div className="p-4 space-y-6">
+      {/* Date Range Filter */}
+      <AnalyticsDateFilter 
+        dateRange={dateRange} 
+        onDateRangeChange={handleDateRangeChange} 
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-xs font-medium">This Week</p>
-                <p className="text-2xl font-bold">{weeklyComparison.thisWeekBundles}</p>
-                <p className="text-blue-100 text-xs">Bundles</p>
-              </div>
-              <div className={`flex items-center text-sm ${weeklyComparison.bundleChange >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                {weeklyComparison.bundleChange >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                {Math.abs(weeklyComparison.bundleChange)}%
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-xs font-medium">Dispatches</p>
-                <p className="text-2xl font-bold">{weeklyComparison.thisWeekDispatches}</p>
-                <p className="text-green-100 text-xs">This week</p>
-              </div>
-              <div className={`flex items-center text-sm ${weeklyComparison.dispatchChange >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                {weeklyComparison.dispatchChange >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                {Math.abs(weeklyComparison.dispatchChange)}%
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-xs font-medium">Peak Hour</p>
-                <p className="text-2xl font-bold">{peakDispatchHour?.hour || 'N/A'}</p>
-                <p className="text-purple-100 text-xs">{peakDispatchHour?.dispatches || 0} dispatches</p>
-              </div>
-              <Clock className="h-8 w-8 text-purple-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-amber-100 text-xs font-medium">Avg Daily</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(movementTrends.reduce((sum, d) => sum + d.bundles, 0) / 30)}
-                </p>
-                <p className="text-amber-100 text-xs">Bundles</p>
-              </div>
-              <Target className="h-8 w-8 text-amber-200" />
-            </div>
-          </CardContent>
-        </Card>
+        <SummaryCard
+          title="Period Bundles"
+          value={periodComparison.currentBundles}
+          subtitle="Current period"
+          change={periodComparison.bundleChange}
+          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+        />
+        <SummaryCard
+          title="Dispatches"
+          value={periodComparison.currentDispatches}
+          subtitle="Current period"
+          change={periodComparison.dispatchChange}
+          gradient="bg-gradient-to-br from-green-500 to-green-600"
+        />
+        <SummaryCard
+          title="Peak Hour"
+          value={peakDispatchHour?.hour || 'N/A'}
+          subtitle={`${peakDispatchHour?.dispatches || 0} dispatches`}
+          gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+          icon={Clock}
+        />
+        <SummaryCard
+          title="Avg Daily"
+          value={avgDailyBundles}
+          subtitle="Bundles"
+          gradient="bg-gradient-to-br from-amber-500 to-amber-600"
+          icon={Target}
+        />
       </div>
 
       {/* Movement Trends Chart */}
@@ -258,9 +307,11 @@ export function Analytics({ movements }: AnalyticsProps) {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-lg">
             <TrendingUp className="h-5 w-5 text-blue-600" />
-            Movement Trends (Last 30 Days)
+            Movement Trends
           </CardTitle>
-          <CardDescription>Daily dispatch count and bundle volume</CardDescription>
+          <CardDescription>
+            Daily dispatch count and bundle volume ({format(dateRange.from, 'MMM dd')} - {format(dateRange.to, 'MMM dd')})
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-72">
@@ -320,16 +371,28 @@ export function Analytics({ movements }: AnalyticsProps) {
         </CardContent>
       </Card>
 
+      {/* Item-wise Charts Section */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold px-1">Item-wise Analysis</h2>
+        <ItemWiseCharts
+          movements={filteredMovements}
+          metricFilter={metricFilter}
+          itemFilter={itemFilter}
+          onMetricFilterChange={handleMetricFilterChange}
+          onItemFilterChange={handleItemFilterChange}
+        />
+      </div>
+
       {/* Two column layout for smaller charts */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Peak Hours Analysis */}
+        {/* Peak Hours Analysis with 12-hour format */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5 text-purple-600" />
               Peak Hours Analysis
             </CardTitle>
-            <CardDescription>Dispatch activity by hour of day</CardDescription>
+            <CardDescription>Dispatch activity by hour of day (12-hour format)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -338,9 +401,12 @@ export function Analytics({ movements }: AnalyticsProps) {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="hour" 
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 9 }}
                     stroke="#9ca3af"
                     interval={1}
+                    angle={-45}
+                    textAnchor="end"
+                    height={50}
                   />
                   <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
                   <Tooltip 
@@ -408,91 +474,58 @@ export function Analytics({ movements }: AnalyticsProps) {
       </div>
 
       {/* Bundle Volume Forecast */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Target className="h-5 w-5 text-amber-600" />
-            Bundle Volume Forecast
-          </CardTitle>
-          <CardDescription>Historical data with 7-day forecast based on moving average</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={forecastData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 11 }}
-                  stroke="#9ca3af"
-                />
-                <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                  }}
-                  formatter={(value: number, name: string) => [
-                    value,
-                    name === 'bundles' ? 'Actual Bundles' : 'Forecasted Bundles'
-                  ]}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="bundles" 
-                  stroke={CHART_COLORS.primary}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  name="Actual"
-                  connectNulls={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="forecast" 
-                  stroke={CHART_COLORS.warning}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ r: 3 }}
-                  name="Forecast"
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Item Type Distribution */}
-      {itemTypeData.length > 0 && (
+      {forecastData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Item Type Distribution</CardTitle>
-            <CardDescription>Breakdown by item type</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Target className="h-5 w-5 text-amber-600" />
+              Bundle Volume Forecast
+            </CardTitle>
+            <CardDescription>Historical data with 7-day forecast based on moving average</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={itemTypeData} layout="vertical">
+                <LineChart data={forecastData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9ca3af" width={60} />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 11 }}
+                    stroke="#9ca3af"
+                  />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
                   <Tooltip 
-                    formatter={(value: number, name: string) => [
-                      value,
-                      name === 'value' ? 'Movements' : 'Bundles'
-                    ]}
                     contentStyle={{ 
                       backgroundColor: 'white', 
                       border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                     }}
+                    formatter={(value: number, name: string) => [
+                      value,
+                      name === 'bundles' ? 'Actual Bundles' : 'Forecasted Bundles'
+                    ]}
                   />
                   <Legend />
-                  <Bar dataKey="value" fill={CHART_COLORS.primary} name="Movements" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="bundles" fill={CHART_COLORS.secondary} name="Bundles" radius={[0, 4, 4, 0]} />
-                </BarChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="bundles" 
+                    stroke={CHART_COLORS.primary}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    name="Actual"
+                    connectNulls={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="forecast" 
+                    stroke={CHART_COLORS.warning}
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={{ r: 3 }}
+                    name="Forecast"
+                    connectNulls={false}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -500,4 +533,4 @@ export function Analytics({ movements }: AnalyticsProps) {
       )}
     </div>
   );
-}
+});
