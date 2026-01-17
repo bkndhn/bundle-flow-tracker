@@ -10,6 +10,7 @@ import { Staff, GoodsMovement } from '@/types';
 import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDateTime12hr } from '@/lib/utils';
 
 interface ReceiveFormProps {
   staff: Staff[];
@@ -148,7 +149,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                       To {LOCATIONS[movement.destination]}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Sent: {new Date(movement.dispatch_date).toLocaleString()}
+                      Sent: {formatDateTime12hr(movement.dispatch_date)}
                     </p>
                     {movement.auto_name && (
                       <p className="text-xs text-green-600">
@@ -194,7 +195,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
               <div className="space-y-2">
                 <Label>Receipt Date & Time</Label>
                 <Input
-                  value={new Date().toLocaleString()}
+                  value={formatDateTime12hr(new Date().toISOString())}
                   disabled
                   className="bg-gray-50/60"
                 />

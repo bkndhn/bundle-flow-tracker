@@ -8,6 +8,7 @@ import { ReceiveForm } from '@/components/ReceiveForm';
 import { StaffManagement } from '@/components/StaffManagement';
 import { Reports } from '@/components/Reports';
 import { Analytics } from '@/components/Analytics';
+import { NotificationDebugPanel } from '@/components/NotificationDebugPanel';
 import { Staff, GoodsMovement } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -409,6 +410,19 @@ const Index = () => {
           onUpdateStaff={handleUpdateStaff}
           onDeleteStaff={handleDeleteStaff}
         />;
+      case 'debug':
+        if (user.role !== 'admin') {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-gray-600">Access denied. Debug panel is only available for administrators.</p>
+            </div>
+          );
+        }
+        return (
+          <div className="p-4">
+            <NotificationDebugPanel userRole={user.role} userId={user.id} />
+          </div>
+        );
       default:
         // Show appropriate default page based on role
         if (user.role === 'admin') {

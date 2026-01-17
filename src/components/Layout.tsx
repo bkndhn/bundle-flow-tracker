@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Truck, Package, Users, BarChart3, FileText, LogOut, TrendingUp } from 'lucide-react';
+import { Truck, Package, Users, BarChart3, FileText, LogOut, TrendingUp, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
           { id: 'receive', label: 'Receive', icon: Package },
           { id: 'reports', label: 'Reports', icon: FileText },
           { id: 'admin', label: 'Admin', icon: Users },
+          { id: 'debug', label: 'Debug', icon: Bug },
         ];
       case 'godown_manager':
         return [
@@ -133,9 +134,9 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 backdrop-blur-sm bg-white/80 border-t border-white/30">
-        <div className={`grid gap-1 ${navigation.length === 6 ? 'grid-cols-6' : navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : navigation.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Bottom Navigation - Enhanced with vibrant colors */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-t-2 border-blue-500/30 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        <div className={`grid gap-0 ${navigation.length === 7 ? 'grid-cols-7' : navigation.length === 6 ? 'grid-cols-6' : navigation.length === 5 ? 'grid-cols-5' : navigation.length === 3 ? 'grid-cols-3' : navigation.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -145,18 +146,41 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
                 key={item.id}
                 onClick={() => onPageChange?.(item.id)}
                 className={cn(
-                  "flex flex-col items-center py-2 px-1 text-xs transition-colors",
+                  "relative flex flex-col items-center py-3 px-1 text-xs transition-all duration-300",
                   isActive
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-blue-600 hover:bg-blue-50/50"
+                    ? "text-white"
+                    : "text-slate-400 hover:text-white"
                 )}
               >
-                <Icon className="h-5 w-5 mb-1" />
-                <span className="font-medium">{item.label}</span>
+                {/* Active indicator glow */}
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-blue-600/40 via-blue-500/20 to-transparent" />
+                )}
+                {/* Active top bar indicator */}
+                {isActive && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                )}
+                <div className={cn(
+                  "p-1.5 rounded-xl transition-all duration-300",
+                  isActive 
+                    ? "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/40" 
+                    : "hover:bg-slate-700/50"
+                )}>
+                  <Icon className={cn(
+                    "h-5 w-5 transition-transform duration-300",
+                    isActive && "scale-110"
+                  )} />
+                </div>
+                <span className={cn(
+                  "font-medium mt-1 transition-all duration-300",
+                  isActive ? "text-blue-300" : ""
+                )}>{item.label}</span>
               </button>
             );
           })}
         </div>
+        {/* Safe area for notched devices */}
+        <div className="h-safe-area-bottom bg-slate-900" />
       </nav>
     </div>
   );
