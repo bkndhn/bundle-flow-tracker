@@ -14,6 +14,7 @@ import { DestinationSelector } from './dispatch/DestinationSelector';
 import { ItemSelector } from './dispatch/ItemSelector';
 import { BundleInputs } from './dispatch/BundleInputs';
 import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
+import { formatDateTime12hr } from '@/lib/utils';
 
 interface DispatchFormProps {
   staff: Staff[];
@@ -350,7 +351,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
             <div className="space-y-2">
               <Label className="text-gray-700">Dispatch Date & Time</Label>
               <Input
-                value={new Date().toLocaleString()}
+                value={formatDateTime12hr(new Date().toISOString())}
                 disabled
                 className="bg-gray-50/60"
               />
