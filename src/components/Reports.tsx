@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Download, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { DateFilter } from './reports/DateFilter';
+import { formatDateTime12hr } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -135,9 +136,8 @@ export function Reports({ movements }: ReportsProps) {
     setCurrentPage(1);
   };
 
-  const formatDateTime = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy hh:mm a');
-  };
+  // Use consistent 12hr format helper
+  const formatDateTime = formatDateTime12hr;
 
   const getStatusBadge = (status: string) => {
     return status === 'received' ? (

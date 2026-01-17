@@ -43,13 +43,14 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
     }
     
     if (itemFilter !== 'all') {
+      // When filtering by item, include 'both' movements but only count the relevant part
       filtered = filtered.filter(m => m.item === itemFilter || m.item === 'both');
     }
     
     return filtered;
   }, [movements, metricFilter, itemFilter]);
 
-  // Calculate item-wise distribution
+  // Calculate item-wise distribution with proper filter respect
   const itemDistribution = useMemo(() => {
     const stats = {
       shirt: { count: 0, bundles: 0, total: 0 },
@@ -77,13 +78,29 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
     return stats;
   }, [filteredMovements]);
 
+  // Calculate totals with proper filter application
+  const { totalShirtBundles, totalPantBundles } = useMemo(() => {
+    let shirtTotal = 0;
+    let pantTotal = 0;
+
+    // When item filter is applied, only count relevant items
+    if (itemFilter === 'shirt') {
+      shirtTotal = itemDistribution.shirt.bundles + itemDistribution.both.shirtBundles;
+      pantTotal = 0; // Don't count pants when filtering for shirts
+    } else if (itemFilter === 'pant') {
+      shirtTotal = 0; // Don't count shirts when filtering for pants
+      pantTotal = itemDistribution.pant.bundles + itemDistribution.both.pantBundles;
+    } else {
+      shirtTotal = itemDistribution.shirt.bundles + itemDistribution.both.shirtBundles;
+      pantTotal = itemDistribution.pant.bundles + itemDistribution.both.pantBundles;
+    }
+
+    return { totalShirtBundles: shirtTotal, totalPantBundles: pantTotal };
+  }, [itemDistribution, itemFilter]);
+
   // Detailed breakdown data for bar chart
   const breakdownData = useMemo(() => {
     const data = [];
-    
-    // Calculate total shirts (from shirt-only + both movements)
-    const totalShirtBundles = itemDistribution.shirt.bundles + itemDistribution.both.shirtBundles;
-    const totalPantBundles = itemDistribution.pant.bundles + itemDistribution.both.pantBundles;
     
     if (itemFilter === 'all' || itemFilter === 'shirt') {
       data.push({
@@ -104,39 +121,95 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
     }
 
     return data;
-  }, [itemDistribution, itemFilter]);
+  }, [itemDistribution, itemFilter, totalShirtBundles, totalPantBundles]);
 
-  // Pie chart data for bundle/pieces distribution
+  // Pie chart data for bundle/pieces distribution - respecting all filters
   const pieData = useMemo(() => {
-    const bundleMovements = movements.filter(m => m.movement_type === 'bundles');
-    const pieceMovements = movements.filter(m => m.movement_type === 'pieces');
+    // Apply item filter first
+    let movementsToAnalyze = movements;
     
-    return [
-      { 
-        name: 'Bundles', 
-        value: bundleMovements.length,
-        total: bundleMovements.reduce((sum, m) => sum + m.bundles_count, 0),
-      },
-      { 
-        name: 'Pieces', 
-        value: pieceMovements.length,
-        total: pieceMovements.reduce((sum, m) => sum + m.bundles_count, 0),
-      },
-    ].filter(d => d.value > 0);
-  }, [movements]);
+    if (itemFilter !== 'all') {
+      movementsToAnalyze = movements.filter(m => m.item === itemFilter || m.item === 'both');
+    }
 
-  // Combined summary data
-  const summaryData = useMemo(() => {
-    const shirtTotal = itemDistribution.shirt.bundles + itemDistribution.both.shirtBundles;
-    const pantTotal = itemDistribution.pant.bundles + itemDistribution.both.pantBundles;
+    const bundleMovements = movementsToAnalyze.filter(m => m.movement_type === 'bundles' || !m.movement_type);
+    const pieceMovements = movementsToAnalyze.filter(m => m.movement_type === 'pieces');
     
-    return [
-      { label: 'Total Shirts', value: shirtTotal, color: 'bg-blue-500' },
-      { label: 'Total Pants', value: pantTotal, color: 'bg-green-500' },
-      { label: 'Total Bundles', value: shirtTotal + pantTotal, color: 'bg-purple-500' },
-      { label: 'Total Movements', value: filteredMovements.length, color: 'bg-amber-500' },
-    ];
-  }, [itemDistribution, filteredMovements.length]);
+    // Calculate totals considering item filter
+    const getBundleTotal = (mvts: GoodsMovement[]) => {
+      return mvts.reduce((sum, m) => {
+        if (itemFilter === 'shirt') {
+          if (m.item === 'shirt') return sum + m.bundles_count;
+          if (m.item === 'both') return sum + (m.shirt_bundles || 0);
+          return sum;
+        } else if (itemFilter === 'pant') {
+          if (m.item === 'pant') return sum + m.bundles_count;
+          if (m.item === 'both') return sum + (m.pant_bundles || 0);
+          return sum;
+        }
+        return sum + m.bundles_count;
+      }, 0);
+    };
+
+    const data = [];
+    
+    // Only show relevant metric types based on metricFilter
+    if (metricFilter === 'all' || metricFilter === 'bundles') {
+      const bundleCount = bundleMovements.length;
+      const bundleTotal = getBundleTotal(bundleMovements);
+      if (bundleCount > 0 || metricFilter === 'bundles') {
+        data.push({ 
+          name: 'Bundles', 
+          value: bundleCount,
+          total: bundleTotal,
+        });
+      }
+    }
+    
+    if (metricFilter === 'all' || metricFilter === 'pieces') {
+      const pieceCount = pieceMovements.length;
+      const pieceTotal = getBundleTotal(pieceMovements);
+      if (pieceCount > 0 || metricFilter === 'pieces') {
+        data.push({ 
+          name: 'Pieces', 
+          value: pieceCount,
+          total: pieceTotal,
+        });
+      }
+    }
+
+    return data.filter(d => d.value > 0);
+  }, [movements, metricFilter, itemFilter]);
+
+  // Combined summary data - properly filtered
+  const summaryData = useMemo(() => {
+    const data = [];
+    
+    // Only show shirt stats if not filtered to pants only
+    if (itemFilter === 'all' || itemFilter === 'shirt') {
+      data.push({ label: 'Total Shirts', value: totalShirtBundles, color: 'bg-blue-500' });
+    }
+    
+    // Only show pant stats if not filtered to shirts only
+    if (itemFilter === 'all' || itemFilter === 'pant') {
+      data.push({ label: 'Total Pants', value: totalPantBundles, color: 'bg-green-500' });
+    }
+    
+    // Total bundles based on filter
+    data.push({ 
+      label: 'Total Bundles', 
+      value: totalShirtBundles + totalPantBundles, 
+      color: 'bg-purple-500' 
+    });
+    
+    data.push({ 
+      label: 'Total Movements', 
+      value: filteredMovements.length, 
+      color: 'bg-amber-500' 
+    });
+
+    return data;
+  }, [totalShirtBundles, totalPantBundles, filteredMovements.length, itemFilter]);
 
   return (
     <div className="space-y-6">
@@ -174,8 +247,8 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Summary Cards - Dynamic based on filter */}
+      <div className={`grid gap-4 ${summaryData.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-4'}`}>
         {summaryData.map((item) => (
           <Card key={item.label} className="bg-white border-0 shadow-sm">
             <CardContent className="p-4">
@@ -200,31 +273,41 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
               <Shirt className="h-5 w-5 text-blue-600" />
               Item-wise Breakdown
             </CardTitle>
-            <CardDescription>Shirts vs Pants distribution</CardDescription>
+            <CardDescription>
+              {itemFilter === 'shirt' ? 'Shirts distribution' : 
+               itemFilter === 'pant' ? 'Pants distribution' : 
+               'Shirts vs Pants distribution'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={breakdownData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#9ca3af" width={60} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      name === 'movements' ? 'Movements' : 'Bundles'
-                    ]}
-                  />
-                  <Legend />
-                  <Bar dataKey="movements" fill={CHART_COLORS.shirt} name="Movements" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="bundles" fill={CHART_COLORS.pant} name="Bundles" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {breakdownData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No data available for selected filters
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdownData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#9ca3af" width={60} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, name: string) => [
+                        value.toLocaleString(),
+                        name === 'movements' ? 'Movements' : 'Bundles'
+                      ]}
+                    />
+                    <Legend />
+                    <Bar dataKey="movements" fill={CHART_COLORS.shirt} name="Movements" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="bundles" fill={CHART_COLORS.pant} name="Bundles" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -236,39 +319,49 @@ export const ItemWiseCharts = memo(function ItemWiseCharts({
               <Package className="h-5 w-5 text-purple-600" />
               Movement Type Distribution
             </CardTitle>
-            <CardDescription>Bundles vs Pieces movements</CardDescription>
+            <CardDescription>
+              {metricFilter === 'bundles' ? 'Bundles movements' :
+               metricFilter === 'pieces' ? 'Pieces movements' :
+               'Bundles vs Pieces movements'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64 flex items-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number, name: string, props: any) => [
-                      `${value} movements (${props.payload.total} total)`,
-                      name
-                    ]}
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {pieData.length === 0 ? (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  No data available for selected filters
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number, name: string, props: any) => [
+                        `${value} movements (${props.payload.total} total)`,
+                        name
+                      ]}
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
