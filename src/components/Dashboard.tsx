@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { GoodsMovement } from '@/types';
 import { Package, Truck, CheckCircle, TrendingUp, Shirt } from 'lucide-react';
+import { formatDateTime12hr } from '@/lib/utils';
 
 interface DashboardProps {
   movements: GoodsMovement[];
@@ -41,10 +42,11 @@ export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) 
   const [itemFilter, setItemFilter] = useState<string>('all');
   const [movementTypeFilter, setMovementTypeFilter] = useState<string>('all');
 
+  // Apply all filters to movements
   const filteredMovements = useMemo(() => {
     return movements.filter(movement => {
       const locationMatch = locationFilter === 'all' || movement.destination === locationFilter;
-      const itemMatch = itemFilter === 'all' || movement.item === itemFilter;
+      const itemMatch = itemFilter === 'all' || movement.item === itemFilter || movement.item === 'both';
       const movementTypeMatch =
         movementTypeFilter === 'all' ||
         (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
@@ -53,66 +55,53 @@ export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) 
     });
   }, [movements, locationFilter, itemFilter, movementTypeFilter]);
 
+  // Stats based on filtered movements
   const stats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayMovements = filteredMovements.filter(m =>
-      new Date(m.dispatch_date) >= today
-    );
-
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - 7);
-    const weekMovements = filteredMovements.filter(m =>
-      new Date(m.dispatch_date) >= weekStart
-    );
-
-    const monthStart = new Date(today);
-    monthStart.setDate(today.getDate() - 30);
-    const monthMovements = filteredMovements.filter(m =>
-      new Date(m.dispatch_date) >= monthStart
-    );
+    // Calculate total quantity considering item filter
+    const calculateQuantity = (mvts: GoodsMovement[]) => {
+      return mvts.reduce((sum, m) => {
+        if (itemFilter === 'shirt') {
+          if (m.item === 'shirt') return sum + m.bundles_count;
+          if (m.item === 'both') return sum + (m.shirt_bundles || 0);
+          return sum;
+        } else if (itemFilter === 'pant') {
+          if (m.item === 'pant') return sum + m.bundles_count;
+          if (m.item === 'both') return sum + (m.pant_bundles || 0);
+          return sum;
+        }
+        return sum + m.bundles_count;
+      }, 0);
+    };
 
     return {
       total: filteredMovements.length,
       dispatched: filteredMovements.filter(m => m.status === 'dispatched').length,
       received: filteredMovements.filter(m => m.status === 'received').length,
-      today: todayMovements.length,
-      week: weekMovements.length,
-      month: monthMovements.length,
-      totalQuantity: filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)
+      totalQuantity: calculateQuantity(filteredMovements)
     };
-  }, [filteredMovements]);
+  }, [filteredMovements, itemFilter]);
 
-  const itemStats = useMemo(() => {
-    const shirtCount = filteredMovements
-      .filter(m => m.item === 'shirt')
-      .reduce((sum, m) => sum + m.bundles_count, 0);
-    const pantCount = filteredMovements
-      .filter(m => m.item === 'pant')
-      .reduce((sum, m) => sum + m.bundles_count, 0);
-    const bothShirtCount = filteredMovements
-      .filter(m => m.item === 'both')
-      .reduce((sum, m) => sum + (m.shirt_bundles || 0), 0);
-    const bothPantCount = filteredMovements
-      .filter(m => m.item === 'both')
-      .reduce((sum, m) => sum + (m.pant_bundles || 0), 0);
+  // Helper to calculate quantities considering item filter
+  const calculateTypeQuantities = useMemo(() => {
+    return (typeMovements: GoodsMovement[]) => {
+      let shirtQ = 0;
+      let pantQ = 0;
 
-    return {
-      shirt: shirtCount + bothShirtCount,
-      pant: pantCount + bothPantCount
+      typeMovements.forEach(m => {
+        if (itemFilter === 'shirt' || itemFilter === 'all') {
+          if (m.item === 'shirt') shirtQ += m.bundles_count;
+          else if (m.item === 'both') shirtQ += m.shirt_bundles || 0;
+        }
+        
+        if (itemFilter === 'pant' || itemFilter === 'all') {
+          if (m.item === 'pant') pantQ += m.bundles_count;
+          else if (m.item === 'both') pantQ += m.pant_bundles || 0;
+        }
+      });
+
+      return { shirtQ, pantQ };
     };
-  }, [filteredMovements]);
-
-  const locationStats = useMemo(() => {
-    const bigShopCount = filteredMovements
-      .filter(m => m.destination === 'big_shop')
-      .reduce((sum, m) => sum + m.bundles_count, 0);
-    const smallShopCount = filteredMovements
-      .filter(m => m.destination === 'small_shop')
-      .reduce((sum, m) => sum + m.bundles_count, 0);
-    return { big_shop: bigShopCount, small_shop: smallShopCount };
-  }, [filteredMovements]);
+  }, [itemFilter]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 space-y-6">
@@ -175,23 +164,24 @@ export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) 
           <StatCard label="Received" value={stats.received} icon={CheckCircle} iconColor="text-green-400" />
         </div>
 
-        {/* Sections for Bundles and Pieces */}
+        {/* Sections for Bundles and Pieces - respecting all filters */}
         {['bundles', 'pieces'].map((type) => {
-          const typeMovements = movements.filter(m =>
+          // Skip if movement type filter doesn't match
+          if (movementTypeFilter !== 'all' && movementTypeFilter !== type) return null;
+
+          // Apply ALL filters to get the type movements
+          const typeMovements = filteredMovements.filter(m =>
             type === 'bundles' ? (!m.movement_type || m.movement_type === 'bundles') : m.movement_type === 'pieces'
           );
 
-          if (movementTypeFilter !== 'all' && movementTypeFilter !== type) return null;
+          // Calculate quantities with item filter applied
+          const { shirtQ, pantQ } = calculateTypeQuantities(typeMovements);
+          const summaryCount = shirtQ + pantQ;
 
-          const summaryCount = typeMovements.reduce((sum, m) => sum + m.bundles_count, 0);
+          // Get recent movements for this type
           const recent = typeMovements
             .sort((a, b) => new Date(b.dispatch_date).getTime() - new Date(a.dispatch_date).getTime())
             .slice(0, 3);
-
-          const shirtQ = typeMovements.filter(m => m.item === 'shirt').reduce((sum, m) => sum + m.bundles_count, 0) +
-            typeMovements.filter(m => m.item === 'both').reduce((sum, m) => sum + (m.shirt_bundles || 0), 0);
-          const pantQ = typeMovements.filter(m => m.item === 'pant').reduce((sum, m) => sum + m.bundles_count, 0) +
-            typeMovements.filter(m => m.item === 'both').reduce((sum, m) => sum + (m.pant_bundles || 0), 0);
 
           return (
             <div key={type} className="space-y-4">
@@ -212,14 +202,18 @@ export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) 
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Shirts</span>
-                      <span className="text-white font-bold">{shirtQ} {type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Pants</span>
-                      <span className="text-white font-bold">{pantQ} {type}</span>
-                    </div>
+                    {(itemFilter === 'all' || itemFilter === 'shirt') && (
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Shirts</span>
+                        <span className="text-white font-bold">{shirtQ} {type}</span>
+                      </div>
+                    )}
+                    {(itemFilter === 'all' || itemFilter === 'pant') && (
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Pants</span>
+                        <span className="text-white font-bold">{pantQ} {type}</span>
+                      </div>
+                    )}
                     <div className="border-t border-white/10 pt-2 flex justify-between">
                       <span className="text-white/80">Total Volume</span>
                       <span className="text-white font-bold underline decoration-white/30">{summaryCount} {type}</span>
@@ -241,7 +235,7 @@ export const Dashboard = memo(function Dashboard({ movements }: DashboardProps) 
                           <div key={m.id} className="flex items-center justify-between text-xs p-2 bg-white/5 rounded">
                             <div className="flex flex-col">
                               <span className="text-white font-medium">{m.bundles_count} {type} of {m.item}</span>
-                              <span className="text-white/40">{new Date(m.dispatch_date).toLocaleDateString()} → {m.destination.replace('_', ' ')}</span>
+                              <span className="text-white/40">{formatDateTime12hr(m.dispatch_date)} → {m.destination.replace('_', ' ')}</span>
                             </div>
                             <Badge variant={m.status === 'received' ? 'default' : 'secondary'} className="text-[10px] py-0 px-1">
                               {m.status}
