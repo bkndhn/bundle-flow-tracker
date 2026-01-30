@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { GoodsMovement } from '@/types';
 import { LOCATIONS, MOVEMENT_STATUS, FARE_PAYMENT_OPTIONS } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,14 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Download, Printer, Search, ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { DateFilter } from './reports/DateFilter';
 import { formatDateTime12hr } from '@/lib/utils';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { printReport } from '@/utils/printReport';
 
 interface ReportsProps {
   movements: GoodsMovement[];
@@ -59,7 +59,7 @@ const expandMovementsForDisplay = (movements: GoodsMovement[]) => {
 
 const ITEMS_PER_PAGE = 20;
 
-export function Reports({ movements }: ReportsProps) {
+export const Reports = memo(function Reports({ movements }: ReportsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'dispatched' | 'received'>('all');
   const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
@@ -67,79 +67,143 @@ export function Reports({ movements }: ReportsProps) {
   const [movementTypeFilter, setMovementTypeFilter] = useState<'all' | 'bundles' | 'pieces'>('all');
   const [dateFilter, setDateFilter] = useState<DateFilterType>({ type: 'today' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   // Expand movements for display (split 'both' items into separate rows)
-  const expandedMovements = expandMovementsForDisplay(movements);
+  const expandedMovements = useMemo(() => expandMovementsForDisplay(movements), [movements]);
 
-  const filteredMovements = expandedMovements.filter(movement => {
-    const matchesSearch =
-      movement.sent_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.received_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.accompanying_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.auto_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      movement.condition_notes?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMovements = useMemo(() => {
+    return expandedMovements.filter(movement => {
+      // Enhanced search - search all available columns
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        movement.sent_by_name?.toLowerCase().includes(searchLower) ||
+        movement.received_by_name?.toLowerCase().includes(searchLower) ||
+        movement.accompanying_person?.toLowerCase().includes(searchLower) ||
+        movement.auto_name?.toLowerCase().includes(searchLower) ||
+        movement.destination.toLowerCase().includes(searchLower) ||
+        (movement.source && movement.source.toLowerCase().includes(searchLower)) ||
+        movement.condition_notes?.toLowerCase().includes(searchLower) ||
+        movement.dispatch_notes?.toLowerCase().includes(searchLower) ||
+        movement.receive_notes?.toLowerCase().includes(searchLower) ||
+        movement.item.toLowerCase().includes(searchLower) ||
+        movement.status.toLowerCase().includes(searchLower) ||
+        (movement.movement_type || 'bundles').toLowerCase().includes(searchLower) ||
+        movement.fare_display_msg?.toLowerCase().includes(searchLower) ||
+        movement.fare_payee_tag?.toLowerCase().includes(searchLower) ||
+        String(movement.bundles_count).includes(searchLower) ||
+        LOCATIONS[movement.destination]?.toLowerCase().includes(searchLower) ||
+        LOCATIONS[movement.source]?.toLowerCase().includes(searchLower) ||
+        formatDateTime12hr(movement.dispatch_date).toLowerCase().includes(searchLower) ||
+        (movement.received_at && formatDateTime12hr(movement.received_at).toLowerCase().includes(searchLower));
 
-    const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
-    const matchesLocation = locationFilter === 'all' || movement.destination === locationFilter;
-    const matchesItem = itemFilter === 'all' || movement.item === itemFilter;
-    const matchesMovementType =
-      movementTypeFilter === 'all' ||
-      (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
-      (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
+      const matchesStatus = statusFilter === 'all' || movement.status === statusFilter;
+      const matchesLocation = locationFilter === 'all' || movement.destination === locationFilter;
+      const matchesItem = itemFilter === 'all' || movement.item === itemFilter;
+      const matchesMovementType =
+        movementTypeFilter === 'all' ||
+        (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
+        (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
 
-    // Date filtering - use new Date() for proper timezone handling
-    const movementDate = new Date(movement.dispatch_date);
-    let matchesDate = true;
+      // Date filtering
+      const movementDate = new Date(movement.dispatch_date);
+      let matchesDate = true;
 
-    switch (dateFilter.type) {
-      case 'today':
-        matchesDate = isToday(movementDate);
-        break;
-      case 'yesterday':
-        matchesDate = isYesterday(movementDate);
-        break;
-      case 'this_week':
-        matchesDate = isThisWeek(movementDate, { weekStartsOn: 1 }); // Monday as week start
-        break;
-      case 'this_month':
-        matchesDate = isThisMonth(movementDate);
-        break;
-      case 'this_year':
-        matchesDate = isThisYear(movementDate);
-        break;
-      case 'custom':
-        if (dateFilter.startDate && dateFilter.endDate) {
-          const startDate = new Date(dateFilter.startDate);
-          startDate.setHours(0, 0, 0, 0);
-          const endDate = new Date(dateFilter.endDate);
-          endDate.setHours(23, 59, 59, 999);
-          matchesDate = movementDate >= startDate && movementDate <= endDate;
-        }
-        break;
-      case 'all':
-        matchesDate = true;
-        break;
-    }
+      switch (dateFilter.type) {
+        case 'today':
+          matchesDate = isToday(movementDate);
+          break;
+        case 'yesterday':
+          matchesDate = isYesterday(movementDate);
+          break;
+        case 'this_week':
+          matchesDate = isThisWeek(movementDate, { weekStartsOn: 1 });
+          break;
+        case 'this_month':
+          matchesDate = isThisMonth(movementDate);
+          break;
+        case 'this_year':
+          matchesDate = isThisYear(movementDate);
+          break;
+        case 'custom':
+          if (dateFilter.startDate && dateFilter.endDate) {
+            const startDate = new Date(dateFilter.startDate);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(dateFilter.endDate);
+            endDate.setHours(23, 59, 59, 999);
+            matchesDate = movementDate >= startDate && movementDate <= endDate;
+          }
+          break;
+        case 'all':
+          matchesDate = true;
+          break;
+      }
 
-    return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate && matchesMovementType;
-  });
+      return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate && matchesMovementType;
+    });
+  }, [expandedMovements, searchTerm, statusFilter, locationFilter, itemFilter, movementTypeFilter, dateFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredMovements.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedMovements = filteredMovements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  // Generate unique row keys
+  const getRowKey = useCallback((movement: GoodsMovement, index: number) => 
+    `${movement.id}-${movement.item}-${index}`, []);
+
   // Reset to page 1 when filters change
-  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<any>>, value: any) => {
+  const handleFilterChange = useCallback((setter: React.Dispatch<React.SetStateAction<any>>, value: any) => {
     setter(value);
     setCurrentPage(1);
-  };
+    setSelectedRows(new Set()); // Clear selection on filter change
+  }, []);
+
+  // Selection handlers
+  const toggleRowSelection = useCallback((key: string) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const selectAllOnPage = useCallback(() => {
+    const allPageKeys = paginatedMovements.map((m, i) => getRowKey(m, startIndex + i));
+    const allSelected = allPageKeys.every(key => selectedRows.has(key));
+    
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all on page
+        allPageKeys.forEach(key => newSet.delete(key));
+      } else {
+        // Select all on page
+        allPageKeys.forEach(key => newSet.add(key));
+      }
+      return newSet;
+    });
+  }, [paginatedMovements, startIndex, selectedRows, getRowKey]);
+
+  const selectAllFiltered = useCallback(() => {
+    const allKeys = filteredMovements.map((m, i) => getRowKey(m, i));
+    const allSelected = allKeys.every(key => selectedRows.has(key));
+    
+    setSelectedRows(allSelected ? new Set() : new Set(allKeys));
+  }, [filteredMovements, selectedRows, getRowKey]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedRows(new Set());
+  }, []);
 
   // Use consistent 12hr format helper
   const formatDateTime = formatDateTime12hr;
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     return status === 'received' ? (
       <Badge variant="default" className="bg-green-100 text-green-800">
         {MOVEMENT_STATUS.received}
@@ -149,11 +213,11 @@ export function Reports({ movements }: ReportsProps) {
         {MOVEMENT_STATUS.dispatched}
       </Badge>
     );
-  };
+  }, []);
 
-  // Define export columns - add any new columns here and they will be exported to both PDF and Excel
-  const getExportData = () => {
-    return filteredMovements.map(movement => ({
+  // Get export data for specific movements
+  const getExportData = useCallback((movementsToExport: GoodsMovement[]) => {
+    return movementsToExport.map(movement => ({
       'Dispatch Date': formatDateTime(movement.dispatch_date),
       'Item': movement.item.charAt(0).toUpperCase() + movement.item.slice(1),
       'Movement Type': movement.movement_type || 'bundles',
@@ -171,10 +235,15 @@ export function Reports({ movements }: ReportsProps) {
       'Dispatch Notes': movement.dispatch_notes || movement.condition_notes || '',
       'Receive Notes': movement.receive_notes || ''
     }));
-  };
+  }, [formatDateTime]);
 
-  // Get date range string for filename based on current filter
-  const getDateRangeForFilename = () => {
+  // Get selected movements
+  const getSelectedMovements = useCallback(() => {
+    return filteredMovements.filter((m, i) => selectedRows.has(getRowKey(m, i)));
+  }, [filteredMovements, selectedRows, getRowKey]);
+
+  // Get date range string for filename
+  const getDateRangeForFilename = useCallback(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
     
     switch (dateFilter.type) {
@@ -215,16 +284,17 @@ export function Reports({ movements }: ReportsProps) {
       default:
         return today;
     }
-  };
+  }, [dateFilter]);
 
   // Export to Excel function
-  const exportToExcel = () => {
-    const exportData = getExportData();
+  const exportToExcel = useCallback((useSelection: boolean = false) => {
+    const movementsToExport = useSelection ? getSelectedMovements() : filteredMovements;
+    const exportData = getExportData(movementsToExport);
     
-    // Create worksheet
+    if (exportData.length === 0) return;
+
     const ws = XLSX.utils.json_to_sheet(exportData);
 
-    // Auto-fit columns
     const colWidths = Object.keys(exportData[0] || {}).map(key => {
       const maxLength = Math.max(
         key.length,
@@ -234,75 +304,33 @@ export function Reports({ movements }: ReportsProps) {
     });
     ws['!cols'] = colWidths;
 
-    // Create workbook and add worksheet
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Movements Report');
 
-    // Generate filename with date range
     const dateRange = getDateRangeForFilename();
-    const fileName = `goods_movements_${dateRange}.xlsx`;
+    const fileName = `goods_movements_${dateRange}${useSelection ? '_selected' : ''}.xlsx`;
 
-    // Download file
     XLSX.writeFile(wb, fileName);
-  };
+  }, [filteredMovements, getSelectedMovements, getExportData, getDateRangeForFilename]);
 
-  // Export to PDF function
-  const exportToPDF = () => {
-    const exportData = getExportData();
-    
-    if (exportData.length === 0) return;
+  // Print functions using print dialog
+  const handlePrintAll = useCallback(() => {
+    const exportData = getExportData(filteredMovements);
+    printReport(exportData, 'Goods Movement Report - All Filtered');
+  }, [filteredMovements, getExportData]);
 
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
+  const handlePrintSelected = useCallback(() => {
+    const selectedMovements = getSelectedMovements();
+    if (selectedMovements.length === 0) {
+      alert('Please select at least one row to print');
+      return;
+    }
+    const exportData = getExportData(selectedMovements);
+    printReport(exportData, `Goods Movement Report - ${selectedMovements.length} Selected`);
+  }, [getSelectedMovements, getExportData]);
 
-    // Add title
-    doc.setFontSize(16);
-    doc.text('Goods Movement Report', 14, 15);
-    
-    // Add date
-    doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 14, 22);
-
-    // Get column headers dynamically from the first row
-    const headers = Object.keys(exportData[0]);
-    
-    // Convert data to array format for autoTable
-    const tableData = exportData.map(row => 
-      headers.map(header => String((row as any)[header] || ''))
-    );
-
-    // Generate table
-    autoTable(doc, {
-      head: [headers],
-      body: tableData,
-      startY: 28,
-      styles: {
-        fontSize: 7,
-        cellPadding: 1.5,
-      },
-      headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: 255,
-        fontStyle: 'bold',
-        fontSize: 7,
-      },
-      alternateRowStyles: {
-        fillColor: [245, 247, 250]
-      },
-      margin: { left: 5, right: 5 },
-      tableWidth: 'auto',
-    });
-
-    // Generate filename with date range
-    const dateRange = getDateRangeForFilename();
-    const fileName = `goods_movements_${dateRange}.pdf`;
-
-    // Download file
-    doc.save(fileName);
-  };
+  const isAllPageSelected = paginatedMovements.length > 0 && 
+    paginatedMovements.every((m, i) => selectedRows.has(getRowKey(m, startIndex + i)));
 
   return (
     <div className="p-4 space-y-4">
@@ -323,7 +351,7 @@ export function Reports({ movements }: ReportsProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by staff name, destination, auto name..."
+                  placeholder="Search all columns: staff, auto, notes, dates..."
                   value={searchTerm}
                   onChange={(e) => handleFilterChange(setSearchTerm, e.target.value)}
                   className="pl-10 bg-white/90"
@@ -376,38 +404,97 @@ export function Reports({ movements }: ReportsProps) {
                   <SelectItem value="pieces">Pieces</SelectItem>
                 </SelectContent>
               </Select>
-
-              <div className="flex gap-2 col-span-2 lg:col-span-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 h-9 bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                  onClick={exportToPDF}
-                  disabled={filteredMovements.length === 0}
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                  onClick={exportToExcel}
-                  disabled={filteredMovements.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Excel
-                </Button>
-              </div>
             </div>
+
+            {/* Export Buttons Row */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                onClick={handlePrintAll}
+                disabled={filteredMovements.length === 0}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Print All ({filteredMovements.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                onClick={handlePrintSelected}
+                disabled={selectedRows.size === 0}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Print Selected ({selectedRows.size})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                onClick={() => exportToExcel(false)}
+                disabled={filteredMovements.length === 0}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Excel All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                onClick={() => exportToExcel(true)}
+                disabled={selectedRows.size === 0}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Excel Selected
+              </Button>
+            </div>
+
+            {/* Selection Controls */}
+            {filteredMovements.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={selectAllOnPage}
+                  className="h-7 text-xs"
+                >
+                  {isAllPageSelected ? <CheckSquare className="h-3 w-3 mr-1" /> : <Square className="h-3 w-3 mr-1" />}
+                  {isAllPageSelected ? 'Deselect Page' : 'Select Page'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={selectAllFiltered}
+                  className="h-7 text-xs"
+                >
+                  Select All ({filteredMovements.length})
+                </Button>
+                {selectedRows.size > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="h-7 text-xs text-red-600 hover:text-red-700"
+                  >
+                    Clear Selection
+                  </Button>
+                )}
+                {selectedRows.size > 0 && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                    {selectedRows.size} selected
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Date Filter */}
           <div className="mb-6">
-            <DateFilter onFilterChange={(filter) => { setDateFilter(filter); setCurrentPage(1); }} />
+            <DateFilter onFilterChange={(filter) => { setDateFilter(filter); setCurrentPage(1); setSelectedRows(new Set()); }} />
           </div>
 
-          {/* Summary Stats - Using unique movement IDs for accurate count */}
+          {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50/80 p-3 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-blue-600 font-medium">Total Movements</div>
@@ -437,10 +524,17 @@ export function Reports({ movements }: ReportsProps) {
 
           {/* Movements Table */}
           <div className="border rounded-lg overflow-x-auto bg-white/60 backdrop-blur-sm">
-            <div className="min-w-[1200px]">
+            <div className="min-w-[1300px]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
+                    <TableHead className="w-10">
+                      <Checkbox 
+                        checked={isAllPageSelected && paginatedMovements.length > 0}
+                        onCheckedChange={selectAllOnPage}
+                        aria-label="Select all on page"
+                      />
+                    </TableHead>
                     <TableHead className="font-semibold">Dispatch Date</TableHead>
                     <TableHead className="font-semibold">Item</TableHead>
                     <TableHead className="font-semibold">Bundles</TableHead>
@@ -461,86 +555,102 @@ export function Reports({ movements }: ReportsProps) {
                 <TableBody>
                   {paginatedMovements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={15} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={16} className="text-center py-8 text-gray-500">
                         No movements found matching your criteria
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedMovements.map((movement, index) => (
-                      <TableRow key={`${movement.id}-${movement.item}-${index}`} className="hover:bg-gray-50/60">
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {formatDateTime(movement.dispatch_date)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize bg-white/80">
-                            {movement.item}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {(!movement.movement_type || movement.movement_type === 'bundles') ? (
-                            <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {movement.movement_type === 'pieces' ? (
-                            <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium text-purple-600 whitespace-nowrap">
-                            {LOCATIONS[movement.source] || 'Godown'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium text-blue-600 whitespace-nowrap">
-                            {LOCATIONS[movement.destination]}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {movement.auto_name || (
-                            <span className="text-gray-400 italic text-sm">Not specified</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">{movement.sent_by_name || 'Unknown'}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {movement.accompanying_person || (
-                            <span className="text-gray-400 italic text-sm">None</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs">
-                            {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
-                          </span>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {movement.received_by_name || (
-                            <span className="text-gray-400 italic text-sm">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {movement.received_at ? (
-                            formatDateTime(movement.received_at)
-                          ) : (
-                            <span className="text-gray-400 italic text-sm">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(movement.status)}</TableCell>
-                        <TableCell>
-                          {movement.dispatch_notes || movement.condition_notes ? (
-                            <span className="text-sm line-clamp-2 max-w-[150px]">{movement.dispatch_notes || movement.condition_notes}</span>
-                          ) : (
-                            <span className="text-gray-400 italic text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {movement.receive_notes ? (
-                            <span className="text-sm line-clamp-2 max-w-[150px]">{movement.receive_notes}</span>
-                          ) : (
-                            <span className="text-gray-400 italic text-sm">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    paginatedMovements.map((movement, index) => {
+                      const rowKey = getRowKey(movement, startIndex + index);
+                      const isSelected = selectedRows.has(rowKey);
+                      
+                      return (
+                        <TableRow 
+                          key={rowKey} 
+                          className={`hover:bg-gray-50/60 cursor-pointer ${isSelected ? 'bg-blue-50/60' : ''}`}
+                          onClick={() => toggleRowSelection(rowKey)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={() => toggleRowSelection(rowKey)}
+                              aria-label={`Select row ${index + 1}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {formatDateTime(movement.dispatch_date)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize bg-white/80">
+                              {movement.item}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {(!movement.movement_type || movement.movement_type === 'bundles') ? (
+                              <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {movement.movement_type === 'pieces' ? (
+                              <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-purple-600 whitespace-nowrap">
+                              {LOCATIONS[movement.source] || 'Godown'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-blue-600 whitespace-nowrap">
+                              {LOCATIONS[movement.destination]}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {movement.auto_name || (
+                              <span className="text-gray-400 italic text-sm">Not specified</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{movement.sent_by_name || 'Unknown'}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {movement.accompanying_person || (
+                              <span className="text-gray-400 italic text-sm">None</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs">
+                              {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
+                            </span>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {movement.received_by_name || (
+                              <span className="text-gray-400 italic text-sm">Pending</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {movement.received_at ? (
+                              formatDateTime(movement.received_at)
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">Pending</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(movement.status)}</TableCell>
+                          <TableCell>
+                            {movement.dispatch_notes || movement.condition_notes ? (
+                              <span className="text-sm line-clamp-2 max-w-[150px]">{movement.dispatch_notes || movement.condition_notes}</span>
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {movement.receive_notes ? (
+                              <span className="text-sm line-clamp-2 max-w-[150px]">{movement.receive_notes}</span>
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -548,64 +658,64 @@ export function Reports({ movements }: ReportsProps) {
           </div>
 
           {/* Pagination Controls */}
-          {
-            totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between mt-4 px-2 gap-3">
-                <div className="text-sm text-gray-600 text-center sm:text-left">
-                  Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredMovements.length)} of {filteredMovements.length} entries
-                </div>
-                <div className="flex items-center gap-1 flex-wrap justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="bg-white/80 px-2 sm:px-3"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline">Previous</span>
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 2) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 1) {
-                        pageNum = totalPages - 2 + i;
-                      } else {
-                        pageNum = currentPage - 1 + i;
-                      }
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`${currentPage === pageNum ? "bg-blue-600" : "bg-white/80"} min-w-[36px]`}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="bg-white/80 px-2 sm:px-3"
-                  >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 px-2 gap-3">
+              <div className="text-sm text-gray-600 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredMovements.length)} of {filteredMovements.length} entries
               </div>
-            )
-          }
-        </CardContent >
-      </Card >
-    </div >
+              <div className="flex items-center gap-1 flex-wrap justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="bg-white/80 px-2 sm:px-3"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 2) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 1) {
+                      pageNum = totalPages - 2 + i;
+                    } else {
+                      pageNum = currentPage - 1 + i;
+                    }
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`${currentPage === pageNum ? "bg-blue-600" : "bg-white/80"} min-w-[36px]`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="bg-white/80 px-2 sm:px-3"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+});
+
+export { Reports as default };

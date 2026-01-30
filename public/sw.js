@@ -1,15 +1,15 @@
 // Service Worker for Goods Movement Tracker PWA
-// Version 3 - Fixed caching strategy to prevent blank pages
-const CACHE_NAME = 'goods-tracker-v3';
+// Version 4 - Enhanced with better push notification support
+const CACHE_NAME = 'goods-tracker-v4';
 const STATIC_ASSETS = [
     '/manifest.json',
     '/logo-192.png',
     '/logo-512.png'
 ];
 
-// Install event - cache only static assets (not index.html which changes)
+// Install event - cache only static assets
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing service worker v3');
+    console.log('[SW] Installing service worker v4');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
@@ -26,7 +26,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating service worker v3');
+    console.log('[SW] Activating service worker v4');
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -59,7 +59,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For HTML and JS files - ALWAYS go network first to prevent stale bundles
+    // For HTML and JS files - ALWAYS go network first
     if (event.request.mode === 'navigate' ||
         url.pathname.endsWith('.html') ||
         url.pathname.endsWith('.js') ||
@@ -68,7 +68,6 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
-                    // Cache the fresh response for offline use
                     if (response.ok) {
                         const responseClone = response.clone();
                         caches.open(CACHE_NAME).then((cache) => {
@@ -78,12 +77,10 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 })
                 .catch(() => {
-                    // Network failed, try cache as fallback
                     return caches.match(event.request).then((cachedResponse) => {
                         if (cachedResponse) {
                             return cachedResponse;
                         }
-                        // Return a basic offline page if nothing in cache
                         return new Response(
                             '<html><body><h1>Offline</h1><p>Please check your connection and refresh.</p><button onclick="location.reload()">Retry</button></body></html>',
                             { headers: { 'Content-Type': 'text/html' } }
@@ -94,7 +91,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For static assets (images, fonts) - cache first
+    // For static assets - cache first
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
@@ -102,7 +99,6 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 }
                 return fetch(event.request).then((networkResponse) => {
-                    // Cache the response for future use
                     if (networkResponse.ok) {
                         const responseClone = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
@@ -115,7 +111,7 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Push notification event
+// Push notification event - CRITICAL for background notifications
 self.addEventListener('push', (event) => {
     console.log('[SW] Push notification received:', event);
 
@@ -136,19 +132,23 @@ self.addEventListener('push', (event) => {
         }
     }
 
+    const options = {
+        body: data.body,
+        icon: data.icon || '/logo-192.png',
+        badge: data.badge || '/logo-192.png',
+        vibrate: [200, 100, 200, 100, 200],
+        data: data.data || { url: '/' },
+        requireInteraction: true,
+        tag: data.tag || `notification-${Date.now()}`,
+        renotify: true,
+        actions: [
+            { action: 'open', title: '📱 Open App' },
+            { action: 'dismiss', title: '✕ Dismiss' }
+        ]
+    };
+
     event.waitUntil(
-        self.registration.showNotification(data.title, {
-            body: data.body,
-            icon: data.icon,
-            badge: data.badge,
-            vibrate: [100, 50, 100],
-            data: data.data,
-            requireInteraction: true,
-            actions: [
-                { action: 'open', title: 'Open App' },
-                { action: 'close', title: 'Dismiss' }
-            ]
-        })
+        self.registration.showNotification(data.title, options)
     );
 });
 
@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', (event) => {
     console.log('[SW] Notification clicked:', event);
     event.notification.close();
 
-    if (event.action === 'close') {
+    if (event.action === 'dismiss') {
         return;
     }
 
@@ -166,6 +166,7 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
+                // Try to focus an existing window
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
                         client.focus();
@@ -175,22 +176,68 @@ self.addEventListener('notificationclick', (event) => {
                         return;
                     }
                 }
+                // Open a new window if none exists
                 return clients.openWindow(urlToOpen);
             })
     );
 });
 
-// Message event - allow manual cache clear
+// Notification close event (for analytics)
+self.addEventListener('notificationclose', (event) => {
+    console.log('[SW] Notification closed:', event.notification.tag);
+});
+
+// Message event - allow manual cache clear and other commands
 self.addEventListener('message', (event) => {
+    console.log('[SW] Message received:', event.data);
+
     if (event.data && event.data.type === 'CLEAR_CACHE') {
         console.log('[SW] Clearing all caches');
         caches.keys().then((names) => {
             names.forEach((name) => caches.delete(name));
         });
-        event.ports[0].postMessage({ success: true });
+        if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({ success: true });
+        }
     }
 
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
+    }
+
+    // Handle push subscription check
+    if (event.data && event.data.type === 'GET_PUSH_SUBSCRIPTION') {
+        self.registration.pushManager.getSubscription()
+            .then((subscription) => {
+                if (event.ports && event.ports[0]) {
+                    event.ports[0].postMessage({ subscription: subscription ? JSON.stringify(subscription) : null });
+                }
+            });
+    }
+});
+
+// Periodic sync for keeping connection alive (if supported)
+self.addEventListener('periodicsync', (event) => {
+    console.log('[SW] Periodic sync event:', event.tag);
+    if (event.tag === 'keep-alive') {
+        event.waitUntil(
+            // Just a ping to keep things fresh
+            fetch('/manifest.json').catch(() => {})
+        );
+    }
+});
+
+// Background sync for offline queue
+self.addEventListener('sync', (event) => {
+    console.log('[SW] Sync event:', event.tag);
+    if (event.tag === 'sync-queue') {
+        event.waitUntil(
+            // The main app will handle the actual sync
+            clients.matchAll().then((clientList) => {
+                clientList.forEach((client) => {
+                    client.postMessage({ type: 'SYNC_REQUESTED' });
+                });
+            })
+        );
     }
 });

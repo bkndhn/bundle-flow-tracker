@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, memo } from 'react';
 import { Truck, Package, Users, BarChart3, FileText, LogOut, TrendingUp, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,14 +15,28 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PWAInstallPrompt } from './PWAInstallPrompt';
 import { NotificationStatus } from './NotificationStatus';
+import { OfflineIndicator } from './OfflineIndicator';
 
 interface LayoutProps {
   children: ReactNode;
   currentPage?: string;
   onPageChange?: (page: string) => void;
+  // Offline sync props
+  isOffline?: boolean;
+  pendingCount?: { dispatches: number; receives: number };
+  isSyncing?: boolean;
+  onSyncNow?: () => void;
 }
 
-export function Layout({ children, currentPage = 'dashboard', onPageChange }: LayoutProps) {
+export const Layout = memo(function Layout({ 
+  children, 
+  currentPage = 'dashboard', 
+  onPageChange,
+  isOffline = false,
+  pendingCount = { dispatches: 0, receives: 0 },
+  isSyncing = false,
+  onSyncNow = () => {},
+}: LayoutProps) {
   const { user, logout } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
@@ -115,6 +129,13 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-gray-600 text-sm hidden sm:block">{user?.email}</span>
+            {/* Offline Indicator */}
+            <OfflineIndicator
+              isOffline={isOffline}
+              pendingCount={pendingCount}
+              isSyncing={isSyncing}
+              onSyncNow={onSyncNow}
+            />
             <NotificationStatus userRole={user?.role} userId={user?.id} />
             <Button
               onClick={handleLogoutClick}
@@ -128,6 +149,13 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
           </div>
         </div>
       </header>
+
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 text-center text-sm font-medium shadow-md">
+          📡 You're offline. Changes will sync when connected.
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="pb-20">
@@ -184,4 +212,4 @@ export function Layout({ children, currentPage = 'dashboard', onPageChange }: La
       </nav>
     </div>
   );
-}
+});
