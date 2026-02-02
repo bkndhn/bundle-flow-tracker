@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Staff, GoodsMovement, AppUser } from '@/types';
-import { FARE_PAYMENT_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { DestinationSelector } from './dispatch/DestinationSelector';
 import { ItemSelector } from './dispatch/ItemSelector';
 import { BundleInputs } from './dispatch/BundleInputs';
 import { BothDestinationDialog } from './dispatch/BothDestinationDialog';
+import { TransportMethodSelector } from './dispatch/TransportMethodSelector';
 import { formatDateTime12hr } from '@/lib/utils';
 
 interface DispatchFormProps {
@@ -96,11 +96,14 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
     shirt_bundles: '',
     pant_bundles: '',
     sent_by: '',
+    transport_method: 'auto' as 'auto' | 'bike' | 'by_walk',
     fare_payment: 'paid_by_sender',
     accompanying_person: '',
     auto_name: '',
     notes: '',
   });
+
+  const showAutoFields = formData.transport_method === 'auto';
 
   const [bothDestinationData, setBothDestinationData] = useState<BothDestinationData>({
     big_shop: { shirt: '', pant: '' },
@@ -180,8 +183,13 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
   };
 
   const createBaseMovement = (destination: 'godown' | 'big_shop' | 'small_shop', totalBundles: number): Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'> => {
-    if (!formData.sent_by || !formData.accompanying_person || !formData.auto_name) {
+    if (!formData.sent_by || !formData.accompanying_person) {
       throw new Error('Please fill in all required fields');
+    }
+
+    // Auto name is only required for auto transport
+    if (formData.transport_method === 'auto' && !formData.auto_name) {
+      throw new Error('Please enter Auto Name');
     }
 
     const selectedStaff = staff.find(s => s.id === formData.sent_by);
@@ -195,11 +203,14 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
       destination,
       sent_by: formData.sent_by,
       sent_by_name: selectedStaff?.name,
-      fare_payment: formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop',
-      fare_display_msg: generateFareDisplayMsg(formData.fare_payment),
-      fare_payee_tag: generateFarePayeeTag(formData.fare_payment),
+      transport_method: formData.transport_method,
+      fare_payment: formData.transport_method === 'auto' 
+        ? formData.fare_payment as 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop'
+        : 'paid_by_sender', // Default for non-auto, no fare needed
+      fare_display_msg: formData.transport_method === 'auto' ? generateFareDisplayMsg(formData.fare_payment) : undefined,
+      fare_payee_tag: formData.transport_method === 'auto' ? generateFarePayeeTag(formData.fare_payment) : undefined,
       accompanying_person: formData.accompanying_person,
-      auto_name: formData.auto_name,
+      auto_name: formData.transport_method === 'auto' ? formData.auto_name : undefined,
       status: 'dispatched',
       condition_notes: formData.notes || undefined,
     };
@@ -302,6 +313,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
         shirt_bundles: '',
         pant_bundles: '',
         sent_by: '',
+        transport_method: 'auto',
         fare_payment: 'paid_by_sender',
         accompanying_person: '',
         auto_name: '',
@@ -407,40 +419,69 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
               </Select>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-gray-700">Auto Fare Payment</Label>
-              <RadioGroup
-                value={formData.fare_payment}
-                onValueChange={(value) => setFormData({ ...formData, fare_payment: value })}
-                className="grid grid-cols-1 gap-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="paid_by_sender" id="paid_sender" />
-                  <Label htmlFor="paid_sender" className="text-gray-700 text-sm">
-                    Paid by Sender
-                  </Label>
+            <TransportMethodSelector
+              value={formData.transport_method}
+              onChange={(value) => setFormData({ ...formData, transport_method: value })}
+            />
+
+            {showAutoFields && (
+              <>
+                <div className="space-y-3">
+                  <Label className="text-gray-700">Auto Fare Payment</Label>
+                  <RadioGroup
+                    value={formData.fare_payment}
+                    onValueChange={(value) => setFormData({ ...formData, fare_payment: value })}
+                    className="grid grid-cols-1 gap-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="paid_by_sender" id="paid_sender" />
+                      <Label htmlFor="paid_sender" className="text-gray-700 text-sm">
+                        Paid by Sender
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
+                      <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">
+                        To Be Paid by Small Shop
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
+                      <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">
+                        To Be Paid by Big Shop
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
-                  <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">
-                    To Be Paid by Small Shop
-                  </Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
+                  <Input
+                    id="auto_name"
+                    list="auto-list"
+                    placeholder="Enter vehicle name/type"
+                    value={formData.auto_name}
+                    onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
+                    required
+                    className="bg-white/90"
+                  />
+                  <datalist id="auto-list">
+                    {autoSuggestions.map(name => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
-                  <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">
-                    To Be Paid by Big Shop
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+              </>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="accompanying" className="text-gray-700">Person Accompanying Auto *</Label>
+              <Label htmlFor="accompanying" className="text-gray-700">
+                Person {showAutoFields ? 'Accompanying Auto' : 'Carrying Goods'} *
+              </Label>
               <Input
                 id="accompanying"
                 list="accompanying-list"
-                placeholder="Enter name of person accompanying"
+                placeholder={showAutoFields ? 'Enter name of person accompanying' : 'Enter name of person carrying goods'}
                 value={formData.accompanying_person}
                 onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
                 required
@@ -448,24 +489,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
               />
               <datalist id="accompanying-list">
                 {accompanyingSuggestions.map(name => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
-              <Input
-                id="auto_name"
-                list="auto-list"
-                placeholder="Enter vehicle name/type"
-                value={formData.auto_name}
-                onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
-                required
-                className="bg-white/90"
-              />
-              <datalist id="auto-list">
-                {autoSuggestions.map(name => (
                   <option key={name} value={name} />
                 ))}
               </datalist>

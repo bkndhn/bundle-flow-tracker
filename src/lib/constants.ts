@@ -17,6 +17,12 @@ export const FARE_PAYMENT_OPTIONS = {
   to_be_paid_by_big_shop: 'To Be Paid by Big Shop'
 } as const;
 
+export const TRANSPORT_METHODS = {
+  auto: 'Auto',
+  bike: 'Bike',
+  by_walk: 'By Walk'
+} as const;
+
 export const MOVEMENT_STATUS = {
   dispatched: 'Dispatched',
   received: 'Received'

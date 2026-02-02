@@ -78,7 +78,8 @@ export const generateWhatsAppMessage = (dispatchData: {
     movement_type: string;
     source: string;
     destination: string;
-    auto_name: string;
+    transport_method?: string;
+    auto_name?: string;
     sent_by_name: string;
     accompanying_person?: string;
     dispatch_notes?: string;
@@ -120,6 +121,15 @@ export const generateWhatsAppMessage = (dispatchData: {
 ${itemEmoji} *${countLabel}:* ${dispatchData.bundles_count}`;
     }
 
+    // Get transport method label and emoji
+    const transportMethod = dispatchData.transport_method || 'auto';
+    const transportLabels: Record<string, { label: string; emoji: string }> = {
+        auto: { label: 'Auto', emoji: '🚗' },
+        bike: { label: 'Bike', emoji: '🏍️' },
+        by_walk: { label: 'By Walk', emoji: '🚶' },
+    };
+    const transport = transportLabels[transportMethod] || transportLabels.auto;
+
     let message = `🚚 *DISPATCH ALERT*
 ━━━━━━━━━━━━━━━━━
 
@@ -127,11 +137,21 @@ ${itemDetails}
 🏭 *From:* ${locationNames[dispatchData.source] || dispatchData.source}
 🏪 *To:* ${locationNames[dispatchData.destination] || dispatchData.destination}
 
-🚗 *Auto:* ${dispatchData.auto_name}
-👤 *Sent by:* ${dispatchData.sent_by_name}
-🧑 *Accompanying:* ${dispatchData.accompanying_person || 'N/A'}`;
+${transport.emoji} *Transport:* ${transport.label}`;
 
-    if (dispatchData.fare_display_msg) {
+    // Show auto name only for auto transport
+    if (transportMethod === 'auto' && dispatchData.auto_name) {
+        message += `\n🚗 *Auto Name:* ${dispatchData.auto_name}`;
+    }
+
+    message += `\n👤 *Sent by:* ${dispatchData.sent_by_name}`;
+    
+    // Label based on transport
+    const personLabel = transportMethod === 'auto' ? 'Accompanying' : 'Carried by';
+    message += `\n🧑 *${personLabel}:* ${dispatchData.accompanying_person || 'N/A'}`;
+
+    // Show fare only for auto transport
+    if (transportMethod === 'auto' && dispatchData.fare_display_msg) {
         message += `\n💰 *${dispatchData.fare_display_msg}*`;
     }
 

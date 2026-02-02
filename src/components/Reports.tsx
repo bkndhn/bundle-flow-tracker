@@ -1,7 +1,7 @@
 
 import { useState, useMemo, useCallback, memo } from 'react';
 import { GoodsMovement } from '@/types';
-import { LOCATIONS, MOVEMENT_STATUS, FARE_PAYMENT_OPTIONS } from '@/lib/constants';
+import { LOCATIONS, MOVEMENT_STATUS, FARE_PAYMENT_OPTIONS, TRANSPORT_METHODS } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Printer, Search, ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
+import { Calendar, Download, Printer, Search, ChevronLeft, ChevronRight, CheckSquare, Square, Truck, Bike, Footprints } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { DateFilter } from './reports/DateFilter';
 import { formatDateTime12hr } from '@/lib/utils';
@@ -65,6 +65,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
   const [locationFilter, setLocationFilter] = useState<'all' | 'big_shop' | 'small_shop'>('all');
   const [itemFilter, setItemFilter] = useState<'all' | 'shirt' | 'pant' | 'both'>('all');
   const [movementTypeFilter, setMovementTypeFilter] = useState<'all' | 'bundles' | 'pieces'>('all');
+  const [transportFilter, setTransportFilter] = useState<'all' | 'auto' | 'bike' | 'by_walk'>('all');
   const [dateFilter, setDateFilter] = useState<DateFilterType>({ type: 'today' });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -104,6 +105,11 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
         movementTypeFilter === 'all' ||
         (movementTypeFilter === 'bundles' && (movement.movement_type === 'bundles' || !movement.movement_type)) ||
         (movementTypeFilter === 'pieces' && movement.movement_type === 'pieces');
+      
+      const matchesTransport = 
+        transportFilter === 'all' || 
+        movement.transport_method === transportFilter ||
+        (!movement.transport_method && transportFilter === 'auto');
 
       // Date filtering
       const movementDate = new Date(movement.dispatch_date);
@@ -139,9 +145,9 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
           break;
       }
 
-      return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate && matchesMovementType;
+      return matchesSearch && matchesStatus && matchesLocation && matchesItem && matchesDate && matchesMovementType && matchesTransport;
     });
-  }, [expandedMovements, searchTerm, statusFilter, locationFilter, itemFilter, movementTypeFilter, dateFilter]);
+  }, [expandedMovements, searchTerm, statusFilter, locationFilter, itemFilter, movementTypeFilter, transportFilter, dateFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredMovements.length / ITEMS_PER_PAGE);
@@ -225,10 +231,13 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
       'Pieces': movement.movement_type === 'pieces' ? movement.bundles_count : '',
       'Source': LOCATIONS[movement.source] || 'Godown',
       'Destination': LOCATIONS[movement.destination],
-      'Auto Name': movement.auto_name || '',
+      'Transport': TRANSPORT_METHODS[movement.transport_method] || 'Auto',
+      'Auto Name': movement.transport_method === 'auto' ? (movement.auto_name || '') : '-',
       'Sent By': movement.sent_by_name || 'Unknown',
       'Accompanying Person': movement.accompanying_person || '',
-      'Fare Payment': movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment],
+      'Fare Payment': movement.transport_method === 'auto' 
+        ? (movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]) 
+        : '-',
       'Received By': movement.received_by_name || 'Pending',
       'Received At': movement.received_at ? formatDateTime(movement.received_at) : 'Pending',
       'Status': MOVEMENT_STATUS[movement.status],
@@ -404,6 +413,24 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                   <SelectItem value="pieces">Pieces</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={transportFilter} onValueChange={(value: any) => handleFilterChange(setTransportFilter, value)}>
+                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                  <SelectValue placeholder="Transport" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Transport</SelectItem>
+                  <SelectItem value="auto">
+                    <span className="flex items-center gap-1"><Truck className="h-3 w-3" /> Auto</span>
+                  </SelectItem>
+                  <SelectItem value="bike">
+                    <span className="flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
+                  </SelectItem>
+                  <SelectItem value="by_walk">
+                    <span className="flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Export Buttons Row */}
@@ -524,7 +551,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
 
           {/* Movements Table */}
           <div className="border rounded-lg overflow-x-auto bg-white/60 backdrop-blur-sm">
-            <div className="min-w-[1300px]">
+            <div className="min-w-[1400px]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
@@ -541,6 +568,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                     <TableHead className="font-semibold">Pieces</TableHead>
                     <TableHead className="font-semibold">Source</TableHead>
                     <TableHead className="font-semibold">Destination</TableHead>
+                    <TableHead className="font-semibold">Transport</TableHead>
                     <TableHead className="font-semibold">Auto Name</TableHead>
                     <TableHead className="font-semibold">Sent By</TableHead>
                     <TableHead className="font-semibold">Accompanying</TableHead>
@@ -555,7 +583,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                 <TableBody>
                   {paginatedMovements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={16} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={17} className="text-center py-8 text-gray-500">
                         No movements found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -605,9 +633,39 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                               {LOCATIONS[movement.destination]}
                             </span>
                           </TableCell>
+                          <TableCell>
+                            {movement.transport_method === 'auto' && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                <Truck className="h-3 w-3 mr-1" />
+                                Auto
+                              </Badge>
+                            )}
+                            {movement.transport_method === 'bike' && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <Bike className="h-3 w-3 mr-1" />
+                                Bike
+                              </Badge>
+                            )}
+                            {movement.transport_method === 'by_walk' && (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                <Footprints className="h-3 w-3 mr-1" />
+                                Walk
+                              </Badge>
+                            )}
+                            {!movement.transport_method && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                <Truck className="h-3 w-3 mr-1" />
+                                Auto
+                              </Badge>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium whitespace-nowrap">
-                            {movement.auto_name || (
-                              <span className="text-gray-400 italic text-sm">Not specified</span>
+                            {movement.transport_method === 'auto' || !movement.transport_method ? (
+                              movement.auto_name || (
+                                <span className="text-gray-400 italic text-sm">Not specified</span>
+                              )
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">-</span>
                             )}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{movement.sent_by_name || 'Unknown'}</TableCell>
@@ -617,9 +675,13 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-xs">
-                              {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
-                            </span>
+                            {movement.transport_method === 'auto' || !movement.transport_method ? (
+                              <span className="text-xs">
+                                {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {movement.received_by_name || (

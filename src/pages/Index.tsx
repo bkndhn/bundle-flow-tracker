@@ -215,9 +215,10 @@ const Index = () => {
         source: movement.source || 'godown',
         destination: movement.destination,
         sent_by: movement.sent_by,
+        transport_method: movement.transport_method || 'auto',
         fare_payment: movement.fare_payment,
         accompanying_person: movement.accompanying_person,
-        auto_name: movement.auto_name,
+        auto_name: movement.auto_name || null,
         status: movement.status,
       };
 
@@ -264,11 +265,12 @@ const Index = () => {
           movement_type: movement.movement_type || 'bundles',
           source: movement.source || 'godown',
           destination: movement.destination,
+          transport_method: movement.transport_method || 'auto',
           auto_name: movement.auto_name,
           sent_by_name: selectedStaff?.name || 'Unknown',
           accompanying_person: movement.accompanying_person,
           dispatch_notes: movement.condition_notes,
-          fare_display_msg: movement.fare_display_msg,
+          fare_display_msg: movement.transport_method === 'auto' ? movement.fare_display_msg : undefined,
           shirt_bundles: movement.shirt_bundles,
           pant_bundles: movement.pant_bundles,
         };

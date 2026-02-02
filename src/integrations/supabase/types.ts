@@ -87,6 +87,9 @@ export type Database = {
           shirt_bundles: number | null
           source: string | null
           status: Database["public"]["Enums"]["movement_status"]
+          transport_method:
+            | Database["public"]["Enums"]["transport_method_type"]
+            | null
           updated_at: string | null
         }
         Insert: {
@@ -113,6 +116,9 @@ export type Database = {
           shirt_bundles?: number | null
           source?: string | null
           status?: Database["public"]["Enums"]["movement_status"]
+          transport_method?:
+            | Database["public"]["Enums"]["transport_method_type"]
+            | null
           updated_at?: string | null
         }
         Update: {
@@ -139,6 +145,9 @@ export type Database = {
           shirt_bundles?: number | null
           source?: string | null
           status?: Database["public"]["Enums"]["movement_status"]
+          transport_method?:
+            | Database["public"]["Enums"]["transport_method_type"]
+            | null
           updated_at?: string | null
         }
         Relationships: [
@@ -202,6 +211,7 @@ export type Database = {
       location_type: "godown" | "big_shop" | "small_shop"
       movement_status: "dispatched" | "received"
       staff_role: "godown_staff" | "shop_staff" | "admin"
+      transport_method_type: "auto" | "bike" | "by_walk"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -339,6 +349,7 @@ export const Constants = {
       location_type: ["godown", "big_shop", "small_shop"],
       movement_status: ["dispatched", "received"],
       staff_role: ["godown_staff", "shop_staff", "admin"],
+      transport_method_type: ["auto", "bike", "by_walk"],
     },
   },
 } as const

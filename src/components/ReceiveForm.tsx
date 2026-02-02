@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Staff, GoodsMovement } from '@/types';
-import { LOCATIONS } from '@/lib/constants';
+import { LOCATIONS, TRANSPORT_METHODS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateTime12hr } from '@/lib/utils';
+import { Truck, Bike, Footprints } from 'lucide-react';
 
 interface ReceiveFormProps {
   staff: Staff[];
@@ -145,23 +146,43 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                         </Badge>
                       )}
                     </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {movement.transport_method === 'auto' && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Auto
+                        </Badge>
+                      )}
+                      {movement.transport_method === 'bike' && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Bike className="h-3 w-3 mr-1" />
+                          Bike
+                        </Badge>
+                      )}
+                      {movement.transport_method === 'by_walk' && (
+                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                          <Footprints className="h-3 w-3 mr-1" />
+                          Walk
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">
                       To {LOCATIONS[movement.destination]}
                     </p>
                     <p className="text-xs text-gray-500">
                       Sent: {formatDateTime12hr(movement.dispatch_date)}
                     </p>
-                    {movement.auto_name && (
+                    {movement.transport_method === 'auto' && movement.auto_name && (
                       <p className="text-xs text-green-600">
                         Auto: {movement.auto_name}
                       </p>
                     )}
                     {movement.accompanying_person && (
                       <p className="text-xs text-blue-600">
-                        Accompanied by: {movement.accompanying_person}
+                        {movement.transport_method === 'auto' ? 'Accompanied by' : 'Carried by'}: {movement.accompanying_person}
                       </p>
                     )}
-                    {movement.fare_display_msg && (
+                    {movement.transport_method === 'auto' && movement.fare_display_msg && (
                       <p className="text-xs text-purple-600">
                         {movement.fare_display_msg}
                       </p>
@@ -211,8 +232,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   <strong>{movement.movement_type === 'pieces' ? 'Pieces' : 'Bundles'}:</strong> {movement.bundles_count}
                 </p>
                 <p className="text-sm text-gray-700">
-                  <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
+                  <strong>Transport:</strong> {TRANSPORT_METHODS[movement.transport_method] || 'Auto'}
                 </p>
+                {movement.transport_method === 'auto' && (
+                  <p className="text-sm text-gray-700">
+                    <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
+                  </p>
+                )}
                 <p className="text-sm text-gray-700">
                   <strong>From:</strong> {LOCATIONS[movement.source] || 'Godown'}
                 </p>
@@ -223,8 +249,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                   <strong>Sent by:</strong> {movement.sent_by_name}
                 </p>
                 <p className="text-sm text-gray-700">
-                  <strong>Fare:</strong> {movement.fare_display_msg || 'Not specified'}
+                  <strong>{movement.transport_method === 'auto' ? 'Accompanied by' : 'Carried by'}:</strong> {movement.accompanying_person || 'Not specified'}
                 </p>
+                {movement.transport_method === 'auto' && (
+                  <p className="text-sm text-gray-700">
+                    <strong>Fare:</strong> {movement.fare_display_msg || 'Not specified'}
+                  </p>
+                )}
                 {(movement.dispatch_notes || movement.condition_notes) && (
                   <p className="text-sm text-gray-700">
                     <strong>Dispatch Notes:</strong> {movement.dispatch_notes || movement.condition_notes}
