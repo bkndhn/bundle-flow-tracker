@@ -11,6 +11,7 @@ interface PrintableRow {
   'Pieces': string | number;
   'Source': string;
   'Destination': string;
+  'Transport': string;
   'Auto Name': string;
   'Sent By': string;
   'Accompanying Person': string;

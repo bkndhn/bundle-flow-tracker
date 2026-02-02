@@ -20,12 +20,13 @@ export interface GoodsMovement {
   destination: 'godown' | 'big_shop' | 'small_shop';
   sent_by: string;
   sent_by_name?: string;
+  transport_method: 'auto' | 'bike' | 'by_walk';
   fare_payment: 'paid_by_sender' | 'to_be_paid_by_small_shop' | 'to_be_paid_by_big_shop';
   fare_display_msg?: string;
   fare_payee_tag?: string;
   item_summary_display?: string;
   accompanying_person: string;
-  auto_name: string;
+  auto_name?: string;
   received_at?: string;
   received_by?: string;
   received_by_name?: string;
