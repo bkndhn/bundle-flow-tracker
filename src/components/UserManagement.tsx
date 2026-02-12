@@ -107,8 +107,6 @@ export function UserManagement() {
 
             // Update password if provided (hash it)
             if (formData.password) {
-                // Use bcrypt-like hashing via Supabase Edge Function or store hashed password
-                // For now, we'll use a simple approach - in production, use proper bcrypt
                 const hashedPassword = await hashPassword(formData.password);
 
                 const { error: passError } = await supabase
@@ -117,19 +115,32 @@ export function UserManagement() {
                     .eq('id', editingUser.id);
 
                 if (passError) throw passError;
+
+                // Store a password version timestamp so other logged-in sessions of this user get forced out
+                await supabase
+                    .from('app_settings' as any)
+                    .upsert({
+                        setting_key: `password_changed_${editingUser.id}`,
+                        setting_value: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'setting_key' });
             }
 
             toast.success('User credentials updated successfully');
 
-            // If credentials changed, force logout
-            if (formData.email !== editingUser.email || formData.password) {
-                toast.info('Credentials changed. Please log in again.');
+            // If the admin changed their own credentials, force their own re-login
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            if (currentUser.id === editingUser.id && (formData.email !== editingUser.email || formData.password)) {
+                toast.info('Your credentials changed. Please log in again.');
                 setTimeout(() => {
                     logout();
                 }, 1500);
             } else {
                 setShowEditDialog(false);
                 loadUsers();
+                if (formData.password) {
+                    toast.info(`${editingUser.email} will be logged out on their next session check.`);
+                }
             }
         } catch (error) {
             console.error('Error updating user:', error);

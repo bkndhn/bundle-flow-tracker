@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, Save, Loader2, ExternalLink } from 'lucide-react';
+import { MessageSquare, Save, Loader2, ExternalLink, Image, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     WhatsAppSettings,
@@ -17,6 +17,7 @@ export function WhatsAppSettingsPanel() {
     const [settings, setSettings] = useState<WhatsAppSettings>({
         whatsapp_enabled: false,
         whatsapp_mode: 'single',
+        whatsapp_share_format: 'text',
         whatsapp_global_group: '',
         whatsapp_godown_group: '',
         whatsapp_big_shop_group: '',
@@ -42,6 +43,7 @@ export function WhatsAppSettingsPanel() {
             const updates = [
                 updateWhatsAppSetting('whatsapp_enabled', String(settings.whatsapp_enabled)),
                 updateWhatsAppSetting('whatsapp_mode', settings.whatsapp_mode),
+                updateWhatsAppSetting('whatsapp_share_format', settings.whatsapp_share_format),
                 updateWhatsAppSetting('whatsapp_global_group', settings.whatsapp_global_group),
                 updateWhatsAppSetting('whatsapp_godown_group', settings.whatsapp_godown_group),
                 updateWhatsAppSetting('whatsapp_big_shop_group', settings.whatsapp_big_shop_group),
@@ -99,6 +101,43 @@ export function WhatsAppSettingsPanel() {
 
                 {settings.whatsapp_enabled && (
                     <>
+                        {/* Share Format Selection */}
+                        <div className="space-y-3">
+                            <Label className="text-base font-medium">Share Format</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings({ ...settings, whatsapp_share_format: 'text' })}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        settings.whatsapp_share_format === 'text'
+                                            ? 'border-green-500 bg-green-50 shadow-md shadow-green-100'
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
+                                >
+                                    <Type className={`h-8 w-8 ${settings.whatsapp_share_format === 'text' ? 'text-green-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-semibold ${settings.whatsapp_share_format === 'text' ? 'text-green-700' : 'text-gray-600'}`}>
+                                        Text Message
+                                    </span>
+                                    <span className="text-xs text-gray-500 text-center">Copy & paste text to WhatsApp</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings({ ...settings, whatsapp_share_format: 'image' })}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        settings.whatsapp_share_format === 'image'
+                                            ? 'border-purple-500 bg-purple-50 shadow-md shadow-purple-100'
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
+                                >
+                                    <Image className={`h-8 w-8 ${settings.whatsapp_share_format === 'image' ? 'text-purple-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-semibold ${settings.whatsapp_share_format === 'image' ? 'text-purple-700' : 'text-gray-600'}`}>
+                                        Image Card
+                                    </span>
+                                    <span className="text-xs text-gray-500 text-center">Beautiful colorful card format</span>
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Mode Selection */}
                         <div className="space-y-2">
                             <Label>Sharing Mode</Label>
