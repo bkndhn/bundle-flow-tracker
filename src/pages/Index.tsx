@@ -387,6 +387,24 @@ const Index = () => {
 
   const handleDeleteStaff = async (id: string) => {
     try {
+      // Check if staff member has any movements referencing them
+      const { data: sentMovements } = await supabase
+        .from('goods_movements')
+        .select('id')
+        .eq('sent_by', id)
+        .limit(1);
+
+      const { data: receivedMovements } = await supabase
+        .from('goods_movements')
+        .select('id')
+        .eq('received_by', id)
+        .limit(1);
+
+      if ((sentMovements && sentMovements.length > 0) || (receivedMovements && receivedMovements.length > 0)) {
+        toast.error('Cannot delete: This staff member has dispatch/receive records. Remove or reassign their records first.');
+        return;
+      }
+
       const { error } = await supabase
         .from('staff')
         .delete()
@@ -394,7 +412,7 @@ const Index = () => {
 
       if (error) {
         console.error('Error deleting staff:', error);
-        toast.error('Failed to delete staff member');
+        toast.error('Failed to delete staff member: ' + error.message);
       } else {
         toast.success('Staff member deleted successfully!');
         loadData();

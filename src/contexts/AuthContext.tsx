@@ -49,6 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Background verification - doesn't block or logout on network errors
   const verifySessionInBackground = async (savedUser: AppUser) => {
     try {
+      // Check if password was changed for this user
+      const { data: pwData } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', `password_changed_${savedUser.id}`)
+        .single();
+
+      if (pwData?.setting_value) {
+        const changedAt = new Date(pwData.setting_value).getTime();
+        const loginAt = new Date(localStorage.getItem('loginTimestamp') || '0').getTime();
+        if (changedAt > loginAt) {
+          console.warn('Password was changed by admin, forcing logout');
+          logout();
+          return;
+        }
+      }
+
       const { data, error } = await supabase
         .from('app_users')
         .select('id, email, role, created_at, password_hash')
@@ -56,13 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        // Network error - keep user logged in (offline-friendly)
         console.warn('Session verification network error, keeping user logged in:', error);
         return;
       }
 
       if (!data) {
-        // User deleted from database - force logout
         console.warn('User not found in database, logging out');
         logout();
         return;
@@ -70,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Check if user details changed (email or role)
       if (data.email !== savedUser.email || data.role !== savedUser.role) {
-        // User details changed, update local storage
         const updatedUser: AppUser = {
           id: data.id,
           email: data.email,
@@ -82,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('User details updated from server');
       }
     } catch (e) {
-      // Network or other error - keep user logged in
       console.warn('Session verification error, keeping user logged in:', e);
     }
   };
@@ -130,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(userWithoutPassword);
       localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+      localStorage.setItem('loginTimestamp', new Date().toISOString());
       return true;
     } catch (e) {
       console.error('Login error:', e);

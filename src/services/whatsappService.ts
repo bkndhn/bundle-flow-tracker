@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface WhatsAppSettings {
     whatsapp_enabled: boolean;
     whatsapp_mode: 'single' | 'multi';
+    whatsapp_share_format: 'text' | 'image';
     whatsapp_global_group: string;
     whatsapp_godown_group: string;
     whatsapp_big_shop_group: string;
@@ -12,6 +13,7 @@ export interface WhatsAppSettings {
 const DEFAULT_SETTINGS: WhatsAppSettings = {
     whatsapp_enabled: false,
     whatsapp_mode: 'single',
+    whatsapp_share_format: 'text',
     whatsapp_global_group: '',
     whatsapp_godown_group: '',
     whatsapp_big_shop_group: '',
@@ -36,6 +38,8 @@ export const getWhatsAppSettings = async (): Promise<WhatsAppSettings> => {
                 settings.whatsapp_enabled = row.setting_value === 'true';
             } else if (row.setting_key === 'whatsapp_mode') {
                 settings.whatsapp_mode = row.setting_value as 'single' | 'multi';
+            } else if (row.setting_key === 'whatsapp_share_format') {
+                settings.whatsapp_share_format = row.setting_value as 'text' | 'image';
             } else if (row.setting_key in settings) {
                 (settings as any)[row.setting_key] = row.setting_value || '';
             }
@@ -218,7 +222,7 @@ export const generateBatchWhatsAppMessage = (dispatches: Array<{
     movement_type: string;
     source: string;
     destination: string;
-    auto_name: string;
+    auto_name?: string;
     sent_by_name: string;
     accompanying_person?: string;
     dispatch_notes?: string;
