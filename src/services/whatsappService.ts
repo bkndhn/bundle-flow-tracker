@@ -222,6 +222,7 @@ export const generateBatchWhatsAppMessage = (dispatches: Array<{
     movement_type: string;
     source: string;
     destination: string;
+    transport_method?: string;
     auto_name?: string;
     sent_by_name: string;
     accompanying_person?: string;
@@ -248,17 +249,23 @@ export const generateBatchWhatsAppMessage = (dispatches: Array<{
         hour12: true,
     });
 
-    // Get common data from first dispatch
     const firstDispatch = dispatches[0];
     const countLabel = firstDispatch.movement_type === 'pieces' ? 'Pcs' : 'Bundles';
+    const transportMethod = firstDispatch.transport_method || 'auto';
+    const transportLabelsMap: Record<string, { label: string; emoji: string }> = {
+        auto: { label: 'Auto', emoji: '🚗' },
+        bike: { label: 'Bike', emoji: '🏍️' },
+        by_walk: { label: 'By Walk', emoji: '🚶' },
+    };
+    const transport = transportLabelsMap[transportMethod] || transportLabelsMap.auto;
+    const personLabel = transportMethod === 'auto' ? 'Accompanying' : 'Carried by';
 
-    // Build dispatch details for each destination
     let dispatchDetails = '';
     let grandTotalShirt = 0;
     let grandTotalPant = 0;
     let grandTotal = 0;
 
-    dispatches.forEach((dispatch, index) => {
+    dispatches.forEach((dispatch) => {
         const shirtCount = dispatch.shirt_bundles || 0;
         const pantCount = dispatch.pant_bundles || 0;
 
@@ -287,11 +294,16 @@ ${dispatchDetails}
 ━━━━━━━━━━━━━━━━━
 
 🏭 *From:* ${locationNames[firstDispatch.source] || firstDispatch.source}
-🚗 *Auto:* ${firstDispatch.auto_name}
-👤 *Sent by:* ${firstDispatch.sent_by_name}
-🧑 *Accompanying:* ${firstDispatch.accompanying_person || 'N/A'}`;
+${transport.emoji} *Transport:* ${transport.label}`;
 
-    if (firstDispatch.fare_display_msg) {
+    if (transportMethod === 'auto' && firstDispatch.auto_name) {
+        message += `\n🚗 *Auto:* ${firstDispatch.auto_name}`;
+    }
+
+    message += `\n👤 *Sent by:* ${firstDispatch.sent_by_name}`;
+    message += `\n🧑 *${personLabel}:* ${firstDispatch.accompanying_person || 'N/A'}`;
+
+    if (transportMethod === 'auto' && firstDispatch.fare_display_msg) {
         message += `\n💰 *${firstDispatch.fare_display_msg}*`;
     }
 

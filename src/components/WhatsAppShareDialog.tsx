@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -7,7 +7,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { MessageSquare, Copy, Check, X, Image } from 'lucide-react';
+import { MessageSquare, Copy, Check, X, Image, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     WhatsAppSettings,
@@ -17,7 +17,7 @@ import {
     copyToClipboard,
     openWhatsAppGroup,
 } from '@/services/whatsappService';
-import { openDispatchImageCard, DispatchImageData } from '@/services/whatsappImageService';
+import { generateDispatchImageBlob, DispatchImageData } from '@/services/whatsappImageService';
 
 interface DispatchDataItem {
     item: string;
@@ -49,6 +49,7 @@ export function WhatsAppShareDialog({
     dispatchData,
 }: WhatsAppShareDialogProps) {
     const [copied, setCopied] = useState(false);
+    const [sharingImage, setSharingImage] = useState(false);
 
     const isBatch = Array.isArray(dispatchData);
     const dispatches = isBatch ? dispatchData : [dispatchData];
@@ -61,13 +62,19 @@ export function WhatsAppShareDialog({
 
     const isImageMode = settings.whatsapp_share_format === 'image';
 
-    const handleCopyAndShare = async () => {
-        const success = await copyToClipboard(message);
+    // Auto-execute text mode: copy + open WhatsApp immediately
+    useEffect(() => {
+        if (open && !isImageMode) {
+            handleTextShare();
+        }
+    }, [open]);
 
+    const handleTextShare = async () => {
+        const success = await copyToClipboard(message);
         if (success) {
             setCopied(true);
-            toast.success('Message copied to clipboard!');
-
+            toast.success('📋 Message copied! Paste in WhatsApp group.');
+            
             setTimeout(() => {
                 if (groupLink) {
                     openWhatsAppGroup(groupLink);
@@ -76,9 +83,57 @@ export function WhatsAppShareDialog({
                     setCopied(false);
                     onClose();
                 }, 1000);
-            }, 500);
+            }, 300);
         } else {
             toast.error('Failed to copy message');
+        }
+    };
+
+    const handleImageShare = async () => {
+        setSharingImage(true);
+        try {
+            const imageData: DispatchImageData[] = dispatches.map(d => ({
+                ...d,
+                transport_method: d.transport_method || 'auto',
+                auto_name: d.auto_name || '',
+            }));
+
+            const blob = await generateDispatchImageBlob(imageData.length > 1 ? imageData : imageData[0]);
+
+            if (blob && navigator.share && navigator.canShare) {
+                const file = new File([blob], 'dispatch-alert.png', { type: 'image/png' });
+                const shareData = { files: [file], title: 'Dispatch Alert' };
+                
+                if (navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    toast.success('Image shared successfully!');
+                    onClose();
+                    return;
+                }
+            }
+
+            // Fallback: download the image
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dispatch-alert.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success('Image downloaded! Share it on WhatsApp manually.');
+                
+                if (groupLink) {
+                    setTimeout(() => openWhatsAppGroup(groupLink), 500);
+                }
+                onClose();
+            }
+        } catch (error: any) {
+            if (error.name !== 'AbortError') {
+                console.error('Image share error:', error);
+                toast.error('Failed to share image. Try again.');
+            }
+        } finally {
+            setSharingImage(false);
         }
     };
 
@@ -93,115 +148,124 @@ export function WhatsAppShareDialog({
         }
     };
 
-    const handleImageShare = () => {
-        const data: DispatchImageData = {
-            ...dispatches[0],
-            transport_method: dispatches[0].transport_method || 'auto',
-            auto_name: dispatches[0].auto_name || '',
-        };
-        openDispatchImageCard(data);
-        onClose();
-    };
-
     const locationNames: Record<string, string> = {
         godown: 'Godown',
         big_shop: 'Big Shop',
         small_shop: 'Small Shop',
     };
 
+    // For text mode, we auto-execute and show minimal UI
+    if (!isImageMode) {
+        return (
+            <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-green-600" />
+                            Sharing to WhatsApp...
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-green-50 p-4 rounded-lg text-center">
+                            {copied ? (
+                                <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
+                                    <Check className="h-5 w-5" />
+                                    Message copied! Opening WhatsApp...
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center gap-2 text-gray-600">
+                                    <Copy className="h-5 w-5 animate-pulse" />
+                                    Copying message...
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Fallback buttons */}
+                        <div className="flex flex-col gap-2">
+                            {groupLink && (
+                                <Button
+                                    onClick={() => { openWhatsAppGroup(groupLink); }}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Open WhatsApp Group
+                                </Button>
+                            )}
+                            <Button variant="outline" onClick={handleCopyOnly} className="w-full">
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copy Message Again
+                            </Button>
+                            <Button variant="ghost" onClick={onClose} className="w-full text-gray-500">
+                                <X className="h-4 w-4 mr-2" />
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    // Image mode UI
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5 text-green-600" />
-                        Share to WhatsApp
+                        <Image className="h-5 w-5 text-purple-600" />
+                        Share Dispatch Image
                     </DialogTitle>
                     <DialogDescription>
-                        {settings.whatsapp_mode === 'single'
-                            ? (dispatches.length > 1 ? 'Share batch dispatch to the team group' : 'Share dispatch details to the team group')
-                            : `Share dispatch details to ${locationNames[dispatches[0].destination]} group`}
+                        {dispatches.length > 1
+                            ? 'Share batch dispatch image to WhatsApp'
+                            : `Share dispatch to ${locationNames[dispatches[0].destination]} via image`}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* Message Preview */}
-                    <div className="bg-gray-50 p-3 rounded-lg max-h-48 overflow-y-auto">
-                        <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans">
-                            {message}
-                        </pre>
+                    {/* Preview summary */}
+                    <div className="bg-purple-50 p-3 rounded-lg">
+                        <div className="text-sm text-purple-800 font-medium mb-1">📦 Dispatch Summary</div>
+                        {dispatches.map((d, i) => (
+                            <div key={i} className="text-xs text-purple-700">
+                                {locationNames[d.source]} → {locationNames[d.destination]}: {d.bundles_count} {d.movement_type === 'pieces' ? 'Pcs' : 'Bundles'}
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex flex-col gap-2">
-                        {/* Image Card Button - shown prominently if image mode */}
-                        {isImageMode && (
-                            <Button
-                                onClick={handleImageShare}
-                                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                            >
-                                <Image className="h-4 w-4 mr-2" />
-                                Open Image Card (Save & Share)
-                            </Button>
-                        )}
-
-                        {groupLink ? (
-                            <Button
-                                onClick={handleCopyAndShare}
-                                className={`w-full ${isImageMode ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'} text-white`}
-                                disabled={copied}
-                            >
-                                {copied ? (
-                                    <>
-                                        <Check className="h-4 w-4 mr-2" />
-                                        Copied! Opening WhatsApp...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy className="h-4 w-4 mr-2" />
-                                        Copy Text & Open WhatsApp
-                                    </>
-                                )}
-                            </Button>
-                        ) : (
-                            !isImageMode && (
-                                <div className="text-center text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-                                    ⚠️ No group link configured for this destination.
-                                    <br />
-                                    <span className="text-xs text-gray-500">
-                                        Ask admin to set up WhatsApp group links in settings.
-                                    </span>
-                                </div>
-                            )
-                        )}
-
-                        {!isImageMode && (
-                            <Button
-                                variant="outline"
-                                onClick={handleCopyOnly}
-                                className="w-full"
-                            >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy Message Only
-                            </Button>
-                        )}
+                        <Button
+                            onClick={handleImageShare}
+                            disabled={sharingImage}
+                            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                        >
+                            {sharingImage ? (
+                                <>
+                                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Generating Image...
+                                </>
+                            ) : (
+                                <>
+                                    <Image className="h-4 w-4 mr-2" />
+                                    Share Image to WhatsApp
+                                </>
+                            )}
+                        </Button>
 
                         <Button
-                            variant="ghost"
-                            onClick={onClose}
-                            className="w-full text-gray-500"
+                            variant="outline"
+                            onClick={handleTextShare}
+                            className="w-full"
                         >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Share as Text Instead
+                        </Button>
+
+                        <Button variant="ghost" onClick={onClose} className="w-full text-gray-500">
                             <X className="h-4 w-4 mr-2" />
-                            Skip WhatsApp Sharing
+                            Skip Sharing
                         </Button>
                     </div>
-
-                    {/* Help Text */}
-                    <p className="text-xs text-gray-500 text-center">
-                        {isImageMode 
-                            ? 'Image card opens in new window. Screenshot or print to share.'
-                            : 'After copying, paste the message in your WhatsApp group and send.'}
-                    </p>
                 </div>
             </DialogContent>
         </Dialog>
