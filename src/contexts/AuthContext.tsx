@@ -19,21 +19,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
 
-          // IMMEDIATELY set user from localStorage (trust it first)
-          // This prevents logout on slow connections
           if (isMounted) {
             setUser(parsedUser);
             setLoading(false);
           }
 
-          // Then verify in background (don't block or logout on failure)
           verifySessionInBackground(parsedUser);
         } else {
           if (isMounted) setLoading(false);
         }
       } catch (e) {
         console.error('Auth init error:', e);
-        // Only clear if JSON parsing fails (corrupt data)
         localStorage.removeItem('currentUser');
         if (isMounted) setLoading(false);
       }
@@ -41,10 +37,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
+    // Poll for password changes every 15 seconds for near-instant force logout
+    const pollInterval = setInterval(() => {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          checkPasswordChanged(parsedUser);
+        } catch {}
+      }
+    }, 15000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
     };
   }, []);
+
+  // Quick password change check for polling
+  const checkPasswordChanged = async (savedUser: AppUser) => {
+    try {
+      const { data: pwData } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', `password_changed_${savedUser.id}`)
+        .single();
+
+      if (pwData?.setting_value) {
+        const changedAt = new Date(pwData.setting_value).getTime();
+        const loginAt = new Date(localStorage.getItem('loginTimestamp') || '0').getTime();
+        if (changedAt > loginAt) {
+          console.warn('Password changed, forcing logout');
+          logout();
+        }
+      }
+    } catch {}
+  };
 
   // Background verification - doesn't block or logout on network errors
   const verifySessionInBackground = async (savedUser: AppUser) => {

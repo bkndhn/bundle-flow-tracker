@@ -48,6 +48,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
         name: addFormData.name,
         role: addFormData.location === 'godown' ? 'godown_staff' : 'shop_staff',
         location: addFormData.location as Staff['location'],
+        is_active: true,
       };
 
       await onAddStaff(newStaff);
@@ -81,6 +82,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
         name: editFormData.name,
         role: editFormData.location === 'godown' ? 'godown_staff' : 'shop_staff',
         location: editFormData.location as Staff['location'],
+        is_active: true,
       };
 
       await onUpdateStaff(editingStaff.id, updatedStaff);
@@ -104,9 +106,12 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
     try {
       await onDeleteStaff(id);
     } catch (error) {
-      toast.error('Failed to delete staff member');
+      // error handled by parent
     }
   };
+
+  // Only show active staff
+  const activeStaff = staff.filter(s => s.is_active !== false);
 
   return (
     <div className="p-4 space-y-6">
@@ -185,7 +190,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
 
       {/* Staff List */}
       <div className="space-y-3">
-        {staff.map((member) => (
+        {activeStaff.map((member) => (
           <Card key={member.id}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -271,9 +276,9 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+                      <AlertDialogTitle>Deactivate Staff Member</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete {member.name}? This action cannot be undone.
+                          Are you sure you want to deactivate {member.name}? They will be hidden from all dropdowns and lists, but their past records will remain intact.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -282,7 +287,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
                           onClick={() => handleDelete(member.id)}
                           className="bg-red-600 hover:bg-red-700"
                         >
-                          Delete
+                          Deactivate
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -294,7 +299,7 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
         ))}
       </div>
 
-      {staff.length === 0 && (
+      {activeStaff.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">No staff members added yet</p>
           <Button

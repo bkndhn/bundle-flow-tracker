@@ -171,6 +171,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_active: boolean
           location: Database["public"]["Enums"]["location_type"]
           name: string
           role: Database["public"]["Enums"]["staff_role"]
@@ -179,6 +180,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          is_active?: boolean
           location: Database["public"]["Enums"]["location_type"]
           name: string
           role: Database["public"]["Enums"]["staff_role"]
@@ -187,6 +189,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          is_active?: boolean
           location?: Database["public"]["Enums"]["location_type"]
           name?: string
           role?: Database["public"]["Enums"]["staff_role"]

@@ -112,8 +112,8 @@ export function DispatchForm({ staff, movements, userRole, onDispatch }: Dispatc
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get staff based on source location
-  const availableStaff = staff.filter(s => s.location === source);
+  // Get staff based on source location - only active staff
+  const availableStaff = staff.filter(s => s.location === source && s.is_active !== false);
   const showBothDialog = formData.destination === 'both';
 
   const generateFareDisplayMsg = (farePayment: string) => {

@@ -4,6 +4,7 @@ export interface Staff {
   name: string;
   role: 'godown_staff' | 'shop_staff' | 'admin';
   location: 'godown' | 'big_shop' | 'small_shop';
+  is_active: boolean;
   created_at: string;
   updated_at?: string;
 }

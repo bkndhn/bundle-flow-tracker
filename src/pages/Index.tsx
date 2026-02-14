@@ -387,39 +387,22 @@ const Index = () => {
 
   const handleDeleteStaff = async (id: string) => {
     try {
-      // Check if staff member has any movements referencing them
-      const { data: sentMovements } = await supabase
-        .from('goods_movements')
-        .select('id')
-        .eq('sent_by', id)
-        .limit(1);
-
-      const { data: receivedMovements } = await supabase
-        .from('goods_movements')
-        .select('id')
-        .eq('received_by', id)
-        .limit(1);
-
-      if ((sentMovements && sentMovements.length > 0) || (receivedMovements && receivedMovements.length > 0)) {
-        toast.error('Cannot delete: This staff member has dispatch/receive records. Remove or reassign their records first.');
-        return;
-      }
-
+      // Soft delete: set is_active to false
       const { error } = await supabase
         .from('staff')
-        .delete()
+        .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) {
-        console.error('Error deleting staff:', error);
-        toast.error('Failed to delete staff member: ' + error.message);
+        console.error('Error deactivating staff:', error);
+        toast.error('Failed to deactivate staff member: ' + error.message);
       } else {
-        toast.success('Staff member deleted successfully!');
+        toast.success('Staff member deactivated successfully!');
         loadData();
       }
     } catch (error) {
-      console.error('Error deleting staff:', error);
-      toast.error('Failed to delete staff member');
+      console.error('Error deactivating staff:', error);
+      toast.error('Failed to deactivate staff member');
     }
   };
 
