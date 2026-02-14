@@ -55,15 +55,15 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
   // Filter staff based on user's location for receiving
   const getFilteredStaff = () => {
+    const activeStaff = staff.filter(s => s.is_active !== false);
     if (user?.role === 'godown_manager') {
-      return staff.filter(s => s.location === 'godown');
+      return activeStaff.filter(s => s.location === 'godown');
     } else if (user?.role === 'small_shop_manager') {
-      return staff.filter(s => s.location === 'small_shop');
+      return activeStaff.filter(s => s.location === 'small_shop');
     } else if (user?.role === 'big_shop_manager') {
-      return staff.filter(s => s.location === 'big_shop');
+      return activeStaff.filter(s => s.location === 'big_shop');
     } else {
-      // Admin sees all staff
-      return staff;
+      return activeStaff;
     }
   };
 
