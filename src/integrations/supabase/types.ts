@@ -69,6 +69,7 @@ export type Database = {
           bundles_count: number
           condition_notes: string | null
           created_at: string | null
+          created_by_user: string | null
           destination: string
           dispatch_date: string
           dispatch_notes: string | null
@@ -98,6 +99,7 @@ export type Database = {
           bundles_count: number
           condition_notes?: string | null
           created_at?: string | null
+          created_by_user?: string | null
           destination: string
           dispatch_date: string
           dispatch_notes?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           bundles_count?: number
           condition_notes?: string | null
           created_at?: string | null
+          created_by_user?: string | null
           destination?: string
           dispatch_date?: string
           dispatch_notes?: string | null
@@ -151,6 +154,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "goods_movements_created_by_user_fkey"
+            columns: ["created_by_user"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "goods_movements_received_by_fkey"
             columns: ["received_by"]

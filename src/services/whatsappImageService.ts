@@ -219,7 +219,7 @@ export async function generateDispatchImageBlob(data: DispatchImageData | Dispat
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('DISPATCH ALERT', canvasW / 2, 32);
+  ctx.fillText('DISPATCHED', canvasW / 2, 32);
 
   // Subtitle
   ctx.font = '13px "Segoe UI", Arial, sans-serif';
