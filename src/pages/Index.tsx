@@ -244,6 +244,9 @@ const Index = () => {
 
       console.log('Insert data:', insertData);
 
+      // Track which user created this dispatch
+      insertData.created_by_user = user?.id || null;
+
       const { data, error } = await supabase
         .from('goods_movements')
         .insert([insertData])
@@ -453,7 +456,7 @@ const Index = () => {
         }
         return <Analytics movements={movements} />;
       case 'dispatch':
-        return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} />;
+        return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} onDataRefresh={loadData} />;
       case 'receive':
         return <ReceiveForm
           staff={staff}
@@ -486,7 +489,7 @@ const Index = () => {
         if (user.role === 'admin') {
           return <Dashboard movements={movements} />;
         } else if (user.role === 'godown_manager') {
-          return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} />;
+          return <DispatchForm staff={staff} movements={movements} userRole={user.role} onDispatch={handleDispatch} onDataRefresh={loadData} />;
         } else {
           return <ReceiveForm staff={staff} pendingMovements={pendingMovements} onReceive={handleReceive} />;
         }

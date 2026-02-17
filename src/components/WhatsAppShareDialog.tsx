@@ -101,8 +101,8 @@ export function WhatsAppShareDialog({
             const blob = await generateDispatchImageBlob(imageData.length > 1 ? imageData : imageData[0]);
 
             if (blob && navigator.share && navigator.canShare) {
-                const file = new File([blob], 'dispatch-alert.png', { type: 'image/png' });
-                const shareData = { files: [file], title: 'Dispatch Alert' };
+            const file = new File([blob], 'dispatched.png', { type: 'image/png' });
+                const shareData = { files: [file], title: 'Dispatched', text: 'Dispatched' };
                 
                 if (navigator.canShare(shareData)) {
                     await navigator.share(shareData);
@@ -117,7 +117,7 @@ export function WhatsAppShareDialog({
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'dispatch-alert.png';
+                a.download = 'dispatched.png';
                 a.click();
                 URL.revokeObjectURL(url);
                 toast.success('Image downloaded! Share it on WhatsApp manually.');
