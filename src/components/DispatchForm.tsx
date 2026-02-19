@@ -251,7 +251,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
       fare_display_msg: formData.transport_method === 'auto' ? generateFareDisplayMsg(formData.fare_payment) : undefined,
       fare_payee_tag: formData.transport_method === 'auto' ? generateFarePayeeTag(formData.fare_payment) : undefined,
       accompanying_person: formData.accompanying_person,
-      auto_name: formData.transport_method === 'auto' ? formData.auto_name : undefined,
+      auto_name: formData.transport_method === 'auto' ? (formData.auto_name || '') : '',
       status: 'dispatched',
       condition_notes: formData.notes || undefined,
     };
@@ -288,7 +288,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
         transport_method: movement.transport_method || 'auto',
         fare_payment: movement.fare_payment,
         accompanying_person: movement.accompanying_person,
-        auto_name: movement.auto_name || null,
+        auto_name: movement.auto_name || '',
         status: movement.status,
         updated_at: new Date().toISOString(),
       };

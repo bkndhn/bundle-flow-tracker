@@ -217,8 +217,8 @@ const Index = () => {
         sent_by: movement.sent_by,
         transport_method: movement.transport_method || 'auto',
         fare_payment: movement.fare_payment,
-        accompanying_person: movement.accompanying_person,
-        auto_name: movement.auto_name || null,
+        accompanying_person: movement.accompanying_person || '',
+        auto_name: movement.auto_name ?? '',  // Must be '' not null — DB is NOT NULL
         status: movement.status,
       };
 
@@ -244,8 +244,10 @@ const Index = () => {
 
       console.log('Insert data:', insertData);
 
-      // Track which user created this dispatch
-      insertData.created_by_user = user?.id || null;
+      // Track which user created this dispatch (validate UUID format to avoid invalid input errors)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const userId = user?.id && uuidRegex.test(user.id) ? user.id : null;
+      insertData.created_by_user = userId;
 
       const { data, error } = await supabase
         .from('goods_movements')
