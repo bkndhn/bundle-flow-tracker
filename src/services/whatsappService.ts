@@ -76,6 +76,17 @@ export const updateWhatsAppSetting = async (key: string, value: string): Promise
     }
 };
 
+const SITE_BASE_URL = 'https://goods-movement-tracker.vercel.app';
+
+/**
+ * Generate a smart receive goods link based on destination.
+ * The link opens the app and navigates to the receive tab for the appropriate role.
+ */
+export const getReceiveGoodsLink = (destination: string): string => {
+    // Destination tells us which shop should receive - use query param for smart routing
+    return `${SITE_BASE_URL}/?action=receive&from=${destination}`;
+};
+
 export const generateWhatsAppMessage = (dispatchData: {
     item: string;
     bundles_count: number;
@@ -161,12 +172,17 @@ ${transport.emoji} *Transport:* ${transport.label}`;
 
     message += `\n📝 *Notes:* ${dispatchData.dispatch_notes || 'None'}`;
 
+    const receiveLink = getReceiveGoodsLink(dispatchData.destination);
+
     message += `
 
 ⏰ *Dispatched:* ${dateStr}, ${timeStr}
 
 ━━━━━━━━━━━━━━━━━
-Please confirm receipt in app ✅`;
+📥 *Receive Goods:*
+${receiveLink}
+
+✅ Please confirm receipt using the link above`;
 
     return message;
 };
@@ -309,12 +325,17 @@ ${transport.emoji} *Transport:* ${transport.label}`;
 
     message += `\n📝 *Notes:* ${firstDispatch.dispatch_notes || 'None'}`;
 
+    // Add receive links for each destination
+    const destLinks = dispatches.map(d => `📥 *${locationNames[d.destination] || d.destination}:* ${getReceiveGoodsLink(d.destination)}`).join('\n');
+
     message += `
 
 ⏰ *Dispatched:* ${dateStr}, ${timeStr}
 
 ━━━━━━━━━━━━━━━━━
-Please confirm receipt in app ✅`;
+${destLinks}
+
+✅ Please confirm receipt using the link above`;
 
     return message;
 };

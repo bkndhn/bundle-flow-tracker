@@ -21,8 +21,23 @@ const Index = () => {
   const { user, loading } = useAuth();
   // Persist current page in sessionStorage to maintain state on refresh
   const [currentPage, setCurrentPage] = useState(() => {
+    // Check URL params for action=receive (from WhatsApp share link)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'receive') {
+      return 'receive';
+    }
     return sessionStorage.getItem('currentPage') || '';
   });
+
+  // Auto-navigate to receive tab if linked from WhatsApp share
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'receive') {
+      setCurrentPage('receive');
+      // Clean up URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Update sessionStorage when page changes
   const handlePageChange = (page: string) => {
