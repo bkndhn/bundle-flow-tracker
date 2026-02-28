@@ -1,4 +1,5 @@
 // Generate a clean, readable dispatch card image for WhatsApp sharing
+import { getReceiveGoodsLink } from '@/services/whatsappService';
 
 const locationNames: Record<string, string> = {
   godown: 'Godown',
@@ -189,7 +190,8 @@ export async function generateDispatchImageBlob(data: DispatchImageData | Dispat
   for (const d of unique) {
     totalH += measureSectionHeight(d) + 16;
   }
-  totalH += 60;
+  // Extra space for receive link section
+  totalH += 120;
 
   const canvasW = BASE_W;
   const canvasH = Math.max(totalH, 300);
@@ -245,15 +247,50 @@ export async function generateDispatchImageBlob(data: DispatchImageData | Dispat
     currentY = renderSection(ctx, d, currentY);
   }
 
-  // Footer
+  // Footer - date/time
   ctx.fillStyle = '#9ca3af';
   ctx.font = '12px "Segoe UI", Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`${dateStr}  •  ${timeStr}`, canvasW / 2, currentY + 14);
-  ctx.font = '11px "Segoe UI", Arial, sans-serif';
+
+  // Receive Goods link section
+  const linkY = currentY + 30;
+  const linkBoxH = unique.length > 1 ? 24 + unique.length * 20 : 44;
+
+  // Green accent box for receive link
+  ctx.fillStyle = '#ecfdf5';
+  drawRoundedRect(ctx, PADDING, linkY, CONTENT_W, linkBoxH, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#86efac';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#059669';
+  ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+  ctx.fillText('📥 Receive Goods:', canvasW / 2, linkY + 16);
+
+  if (unique.length > 1) {
+    unique.forEach((d, i) => {
+      const destName = locationNames[d.destination] || d.destination;
+      const link = getReceiveGoodsLink(d.destination);
+      ctx.fillStyle = '#0d9488';
+      ctx.font = '11px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(`${destName}: ${link}`, canvasW / 2, linkY + 34 + i * 20);
+    });
+  } else {
+    const link = getReceiveGoodsLink(unique[0].destination);
+    ctx.fillStyle = '#0d9488';
+    ctx.font = '11px "Segoe UI", Arial, sans-serif';
+    ctx.fillText(link, canvasW / 2, linkY + 34);
+  }
+
+  currentY = linkY + linkBoxH + 8;
+
   ctx.fillStyle = '#b0b0b0';
-  ctx.fillText('Please confirm receipt in app', canvasW / 2, currentY + 32);
+  ctx.font = '11px "Segoe UI", Arial, sans-serif';
+  ctx.fillText('✅ Please confirm receipt using the link above', canvasW / 2, currentY + 10);
   ctx.textAlign = 'left';
+  currentY += 20;
 
   // Trim canvas to actual content height
   const finalH = currentY + 48;
