@@ -102,7 +102,15 @@ export function WhatsAppShareDialog({
 
             if (blob && navigator.share && navigator.canShare) {
             const file = new File([blob], 'dispatched.png', { type: 'image/png' });
-                const shareData = { files: [file], title: 'Dispatched', text: 'Dispatched' };
+                // Build caption with clickable receive link(s)
+                const uniqueDests = [...new Set(dispatches.map(d => d.destination))];
+                const receiveLinks = uniqueDests.map(dest => {
+                  const locationNames: Record<string, string> = { godown: 'Godown', big_shop: 'Big Shop', small_shop: 'Small Shop' };
+                  const destName = locationNames[dest] || dest;
+                  return `📥 Receive (${destName}): https://goods-movement-tracker.vercel.app/?action=receive&from=${dest}`;
+                }).join('\n');
+                const caption = `Dispatched\n\n${receiveLinks}\n\n✅ Please confirm receipt using the link above`;
+                const shareData = { files: [file], title: 'Dispatched', text: caption };
                 
                 if (navigator.canShare(shareData)) {
                     await navigator.share(shareData);
