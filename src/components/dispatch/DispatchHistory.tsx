@@ -41,8 +41,16 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
   const filteredMovements = movements.filter(m => {
     if (m.status !== 'dispatched') return false;
     if (currentUser.role === 'admin') return true;
-    // Show to user who created it (matched by created_by_user)
+    // Show to user who created it (matched by created_by_user or email-based matching)
     if ((m as any).created_by_user === currentUser.id) return true;
+    // Also match by source location for role-based access
+    const roleLocationMap: Record<string, string> = {
+      godown_manager: 'godown',
+      big_shop_manager: 'big_shop',
+      small_shop_manager: 'small_shop',
+    };
+    const userLocation = roleLocationMap[currentUser.role];
+    if (userLocation && m.source === userLocation) return true;
     return false;
   });
 
