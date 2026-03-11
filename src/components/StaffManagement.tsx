@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { WhatsAppSettingsPanel } from './WhatsAppSettingsPanel';
+import { StaffLoginGenerator } from './StaffLoginGenerator';
 
 interface StaffManagementProps {
   staff: Staff[];
