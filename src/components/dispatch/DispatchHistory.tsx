@@ -60,6 +60,14 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
     if (m.status === 'received') return false;
     if (currentUser.role === 'admin') return true;
     if ((m as any).created_by_user === currentUser.id) return true;
+    // Allow managers to edit/delete dispatches from their source location
+    const roleLocationMap: Record<string, string> = {
+      godown_manager: 'godown',
+      big_shop_manager: 'big_shop',
+      small_shop_manager: 'small_shop',
+    };
+    const userLocation = roleLocationMap[currentUser.role];
+    if (userLocation && m.source === userLocation) return true;
     return false;
   };
 

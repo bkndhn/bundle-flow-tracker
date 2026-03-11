@@ -168,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         role: data.role as AppUser['role'],
         created_at: data.created_at,
+        linked_staff_id: (data as any).linked_staff_id || undefined,
       };
 
       setUser(userWithoutPassword);
