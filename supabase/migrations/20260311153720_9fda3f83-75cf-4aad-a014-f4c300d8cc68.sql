@@ -1,0 +1,1 @@
+ALTER TABLE public.app_users ADD COLUMN linked_staff_id uuid REFERENCES public.staff(id) ON DELETE SET NULL;

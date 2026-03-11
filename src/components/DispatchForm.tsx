@@ -106,7 +106,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
     bundles_count: '',
     shirt_bundles: '',
     pant_bundles: '',
-    sent_by: '',
+    sent_by: user?.linked_staff_id || '',
     transport_method: 'auto' as 'auto' | 'bike' | 'by_walk',
     fare_payment: 'paid_by_sender',
     accompanying_person: '',
@@ -449,6 +449,18 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-gray-700">Dispatch Date & Time</Label>
+                <Input
+                  value={editingMovement
+                    ? formatDateTime12hr(editingMovement.dispatch_date)
+                    : formatDateTime12hr(new Date().toISOString())
+                  }
+                  disabled
+                  className="bg-gray-50/60"
+                />
+              </div>
+
               <div className="space-y-3">
                 <Label className="text-gray-700">Movement Type</Label>
                 <RadioGroup
@@ -467,35 +479,11 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                 </RadioGroup>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-gray-700">Dispatch Date & Time</Label>
-                <Input
-                  value={editingMovement
-                    ? formatDateTime12hr(editingMovement.dispatch_date)
-                    : formatDateTime12hr(new Date().toISOString())
-                  }
-                  disabled
-                  className="bg-gray-50/60"
-                />
-              </div>
-
-              {/* Hide destination change during edit if it was 'both' originally - show fixed */}
-              {editingMovement ? (
-                <div className="space-y-2">
-                  <Label className="text-gray-700">Destination</Label>
-                  <Input
-                    value={formData.destination === 'big_shop' ? 'Big Shop' : formData.destination === 'small_shop' ? 'Small Shop' : formData.destination === 'godown' ? 'Godown' : formData.destination}
-                    disabled
-                    className="bg-gray-50/60"
-                  />
-                </div>
-              ) : (
-                <DestinationSelector
-                  value={formData.destination}
-                  onChange={handleDestinationChange}
-                  availableDestinations={availableDestinations}
-                />
-              )}
+              <DestinationSelector
+                value={formData.destination}
+                onChange={handleDestinationChange}
+                availableDestinations={availableDestinations}
+              />
 
               <ItemSelector
                 value={formData.item}

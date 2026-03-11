@@ -43,6 +43,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          linked_staff_id: string | null
           password_hash: string
           role: string
         }
@@ -50,6 +51,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          linked_staff_id?: string | null
           password_hash: string
           role: string
         }
@@ -57,10 +59,19 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          linked_staff_id?: string | null
           password_hash?: string
           role?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_users_linked_staff_id_fkey"
+            columns: ["linked_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       goods_movements: {
         Row: {

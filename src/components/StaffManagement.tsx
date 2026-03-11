@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { WhatsAppSettingsPanel } from './WhatsAppSettingsPanel';
+import { StaffLoginGenerator } from './StaffLoginGenerator';
 
 interface StaffManagementProps {
   staff: Staff[];
@@ -310,6 +311,9 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
           </Button>
         </div>
       )}
+
+      {/* Staff Login Generator */}
+      <StaffLoginGenerator staff={staff} onComplete={() => {}} />
 
       {/* User Credentials Management Section */}
       <UserManagement />

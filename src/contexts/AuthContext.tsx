@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase
         .from('app_users')
-        .select('id, email, role, created_at, password_hash')
+        .select('id, email, role, created_at, password_hash, linked_staff_id')
         .eq('id', savedUser.id)
         .single();
 
@@ -111,13 +111,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Check if user details changed (email or role)
-      if (data.email !== savedUser.email || data.role !== savedUser.role) {
+      // Check if user details changed (email, role, or linked_staff_id)
+      if (data.email !== savedUser.email || data.role !== savedUser.role || (data as any).linked_staff_id !== savedUser.linked_staff_id) {
         const updatedUser: AppUser = {
           id: data.id,
           email: data.email,
           role: data.role as AppUser['role'],
           created_at: data.created_at,
+          linked_staff_id: (data as any).linked_staff_id || undefined,
         };
         setUser(updatedUser);
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase
         .from('app_users')
-        .select('id, email, role, created_at, password_hash')
+        .select('id, email, role, created_at, password_hash, linked_staff_id')
         .eq('email', email.toLowerCase().trim())
         .single();
 
@@ -167,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         role: data.role as AppUser['role'],
         created_at: data.created_at,
+        linked_staff_id: (data as any).linked_staff_id || undefined,
       };
 
       setUser(userWithoutPassword);

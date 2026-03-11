@@ -51,6 +51,7 @@ export interface AppUser {
   email: string;
   role: 'admin' | 'godown_manager' | 'small_shop_manager' | 'big_shop_manager';
   created_at: string;
+  linked_staff_id?: string;
 }
 
 export interface AuthContextType {
