@@ -106,7 +106,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
     bundles_count: '',
     shirt_bundles: '',
     pant_bundles: '',
-    sent_by: '',
+    sent_by: user?.linked_staff_id || '',
     transport_method: 'auto' as 'auto' | 'bike' | 'by_walk',
     fare_payment: 'paid_by_sender',
     accompanying_person: '',

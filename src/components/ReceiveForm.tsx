@@ -28,7 +28,7 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   const { user } = useAuth();
   const [selectedMovement, setSelectedMovement] = useState<string>('');
   const [formData, setFormData] = useState({
-    received_by: '',
+    received_by: user?.linked_staff_id || '',
     condition_notes: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
