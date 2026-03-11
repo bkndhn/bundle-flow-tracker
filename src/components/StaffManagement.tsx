@@ -312,6 +312,9 @@ export function StaffManagement({ staff, onAddStaff, onUpdateStaff, onDeleteStaf
         </div>
       )}
 
+      {/* Staff Login Generator */}
+      <StaffLoginGenerator staff={staff} onComplete={() => {}} />
+
       {/* User Credentials Management Section */}
       <UserManagement />
 
