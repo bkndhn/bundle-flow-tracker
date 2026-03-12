@@ -11,7 +11,8 @@ import { LOCATIONS, TRANSPORT_METHODS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateTime12hr } from '@/lib/utils';
-import { Truck, Bike, Footprints } from 'lucide-react';
+import { Truck, Bike, Footprints, Package, Inbox } from 'lucide-react';
+import { DeliveryTimeline } from './dispatch/DeliveryTimeline';
 
 interface ReceiveFormProps {
   staff: Staff[];
@@ -106,98 +107,46 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 space-y-6">
       {/* Pending Movements List */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Pending Receipts</h2>
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-lg shadow-md">
+            <Inbox className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Pending Receipts</h2>
+            <p className="text-xs text-muted-foreground">
+              {filteredPendingMovements.length} shipment{filteredPendingMovements.length !== 1 ? 's' : ''} awaiting receipt
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-3">
           {filteredPendingMovements.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50/50 rounded-lg border border-gray-100">
-              <div className="text-gray-400 mb-2">
-                <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-              </div>
-              <p className="text-gray-500 font-medium">No Pending Receipts</p>
-              <p className="text-gray-400 text-sm mt-1">All shipments have been received</p>
-            </div>
-          ) : filteredPendingMovements.map((movement) => (
+            <Card className="backdrop-blur-sm bg-white/70 border-white/30">
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-4">
+                    <Package className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <p className="text-gray-700 font-semibold text-lg">All Caught Up!</p>
+                  <p className="text-muted-foreground text-sm mt-1">No pending shipments to receive</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : filteredPendingMovements.map((m) => (
             <Card
-              key={movement.id}
-              className={`cursor-pointer transition-colors backdrop-blur-sm bg-white/70 border-white/30 ${selectedMovement === movement.id ? 'ring-2 ring-blue-400 bg-blue-50/60' : ''
-                }`}
-              onClick={() => setSelectedMovement(movement.id)}
+              key={m.id}
+              className={`cursor-pointer transition-all duration-200 backdrop-blur-sm border ${
+                selectedMovement === m.id
+                  ? 'ring-2 ring-blue-400 bg-blue-50/80 border-blue-200 shadow-lg shadow-blue-100'
+                  : 'bg-white/70 border-white/30 hover:bg-white/90 hover:shadow-md'
+              }`}
+              onClick={() => setSelectedMovement(m.id)}
             >
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Badge variant="secondary" className="bg-yellow-100/80 text-yellow-800">Dispatched</Badge>
-                      <span className="text-sm font-medium">
-                        {movement.bundles_count} {movement.movement_type === 'pieces' ? 'pieces' : 'bundles'}
-                      </span>
-                      {movement.item === 'both' ? (
-                        <Badge variant="outline" className="bg-white/60">
-                          {movement.item_summary_display || 'Both Items'}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="capitalize bg-white/60">
-                          {movement.item}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {movement.transport_method === 'auto' && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                          <Truck className="h-3 w-3 mr-1" />
-                          Auto
-                        </Badge>
-                      )}
-                      {movement.transport_method === 'bike' && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <Bike className="h-3 w-3 mr-1" />
-                          Bike
-                        </Badge>
-                      )}
-                      {movement.transport_method === 'by_walk' && (
-                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                          <Footprints className="h-3 w-3 mr-1" />
-                          Walk
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      To {LOCATIONS[movement.destination]}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Sent: {formatDateTime12hr(movement.dispatch_date)}
-                    </p>
-                    {movement.transport_method === 'auto' && movement.auto_name && (
-                      <p className="text-xs text-green-600">
-                        Auto: {movement.auto_name}
-                      </p>
-                    )}
-                    {movement.accompanying_person && (
-                      <p className="text-xs text-blue-600">
-                        {movement.transport_method === 'auto' ? 'Accompanied by' : 'Carried by'}: {movement.accompanying_person}
-                      </p>
-                    )}
-                    {movement.transport_method === 'auto' && movement.fare_display_msg && (
-                      <p className="text-xs text-purple-600">
-                        {movement.fare_display_msg}
-                      </p>
-                    )}
-                    {movement.condition_notes && (
-                      <p className="text-xs text-gray-600">
-                        Notes: {movement.condition_notes}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{movement.sent_by_name}</p>
-                    <p className="text-xs text-gray-500">Sent by</p>
-                  </div>
-                </div>
+                <DeliveryTimeline movement={m} />
               </CardContent>
             </Card>
           ))}
@@ -206,15 +155,18 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
       {/* Receive Form */}
       {selectedMovement && movement && (
-        <Card className="backdrop-blur-sm bg-white/80 border-white/40">
-          <CardHeader>
-            <CardTitle className="text-gray-800">Confirm Receipt</CardTitle>
+        <Card className="backdrop-blur-sm bg-white/90 border-blue-200 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-800 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              Confirm Receipt
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Receipt Time (Auto-filled) */}
               <div className="space-y-2">
-                <Label>Receipt Date & Time</Label>
+                <Label className="text-gray-700">Receipt Date & Time</Label>
                 <Input
                   value={formatDateTime12hr(new Date().toISOString())}
                   disabled
@@ -222,55 +174,14 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
                 />
               </div>
 
-              {/* Movement Details */}
-              <div className="bg-gray-50/60 p-4 rounded-md space-y-2 backdrop-blur-sm">
-                <h3 className="font-medium text-gray-900">Movement Details</h3>
-                <p className="text-sm text-gray-700">
-                  <strong>Item:</strong> {movement.item === 'both' ? movement.item_summary_display : <span className="capitalize">{movement.item}</span>}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <strong>{movement.movement_type === 'pieces' ? 'Pieces' : 'Bundles'}:</strong> {movement.bundles_count}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <strong>Transport:</strong> {TRANSPORT_METHODS[movement.transport_method] || 'Auto'}
-                </p>
-                {movement.transport_method === 'auto' && (
-                  <p className="text-sm text-gray-700">
-                    <strong>Auto Name:</strong> {movement.auto_name || 'Not specified'}
-                  </p>
-                )}
-                <p className="text-sm text-gray-700">
-                  <strong>From:</strong> {LOCATIONS[movement.source] || 'Godown'}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <strong>To:</strong> {LOCATIONS[movement.destination]}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <strong>Sent by:</strong> {movement.sent_by_name}
-                </p>
-                <p className="text-sm text-gray-700">
-                  <strong>{movement.transport_method === 'auto' ? 'Accompanied by' : 'Carried by'}:</strong> {movement.accompanying_person || 'Not specified'}
-                </p>
-                {movement.transport_method === 'auto' && (
-                  <p className="text-sm text-gray-700">
-                    <strong>Fare:</strong> {movement.fare_display_msg || 'Not specified'}
-                  </p>
-                )}
-                {(movement.dispatch_notes || movement.condition_notes) && (
-                  <p className="text-sm text-gray-700">
-                    <strong>Dispatch Notes:</strong> {movement.dispatch_notes || movement.condition_notes}
-                  </p>
-                )}
-              </div>
-
               {/* Received By */}
               <div className="space-y-2">
-                <Label>Received By *</Label>
+                <Label className="text-gray-700">Received By *</Label>
                 <Select
                   value={formData.received_by}
                   onValueChange={(value) => setFormData({ ...formData, received_by: value })}
                 >
-                  <SelectTrigger className="bg-white/80">
+                  <SelectTrigger className="bg-white/90">
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -285,30 +196,31 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
               {/* Receive Notes */}
               <div className="space-y-2">
-                <Label htmlFor="notes">Receive Notes (Optional)</Label>
+                <Label htmlFor="notes" className="text-gray-700">Receive Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   placeholder="Any notes about the received goods condition..."
                   value={formData.condition_notes}
                   onChange={(e) => setFormData({ ...formData, condition_notes: e.target.value })}
                   rows={3}
-                  className="bg-white/80"
+                  className="bg-white/90"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-200 transition-all"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Confirming Receipt...' : 'Confirm Receipt'}
+                {isSubmitting ? 'Confirming Receipt...' : '✓ Confirm Receipt'}
               </Button>
             </form>
           </CardContent>
         </Card>
       )}
-
-      {pendingMovements.length === 0 && filteredPendingMovements.length === 0 && null}
     </div>
   );
 }
+
+// Need to import CheckCircle for the confirm receipt section
+import { CheckCircle } from 'lucide-react';
