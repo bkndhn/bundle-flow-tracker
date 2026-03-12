@@ -11,7 +11,7 @@ import { LOCATIONS, TRANSPORT_METHODS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateTime12hr } from '@/lib/utils';
-import { Truck, Bike, Footprints, Package, Inbox } from 'lucide-react';
+import { Truck, Bike, Footprints, Package, Inbox, CheckCircle } from 'lucide-react';
 import { DeliveryTimeline } from './dispatch/DeliveryTimeline';
 
 interface ReceiveFormProps {
