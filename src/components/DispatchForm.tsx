@@ -175,6 +175,11 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
       shirt_bundles: '',
       pant_bundles: ''
     });
+    // Reset both destination data when destination changes
+    setBothDestinationData({
+      big_shop: { shirt: '', pant: '' },
+      small_shop: { shirt: '', pant: '' }
+    });
   };
 
   const handleItemChange = (value: string) => {
@@ -204,6 +209,12 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
       accompanying_person: movement.accompanying_person || '',
       auto_name: movement.auto_name || '',
       notes: movement.dispatch_notes || movement.condition_notes || '',
+    });
+
+    // Reset both destination data
+    setBothDestinationData({
+      big_shop: { shirt: '', pant: '' },
+      small_shop: { shirt: '', pant: '' }
     });
 
     // Scroll to form
@@ -323,14 +334,75 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
     }
   };
 
+  const handleEditWithBothDestination = async () => {
+    if (!editingMovement) return;
+
+    try {
+      // Validate both destination data
+      const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
+      const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
+      const bigTotal = bigShirt + bigPant;
+      const smallShirt = parseInt(bothDestinationData.small_shop.shirt) || 0;
+      const smallPant = parseInt(bothDestinationData.small_shop.pant) || 0;
+      const smallTotal = smallShirt + smallPant;
+
+      if (bigTotal === 0 && smallTotal === 0) {
+        toast.error('Please enter at least one bundle count');
+        return;
+      }
+
+      // Delete the original record
+      const { error: deleteError } = await supabase
+        .from('goods_movements')
+        .delete()
+        .eq('id', editingMovement.id);
+
+      if (deleteError) {
+        toast.error('Failed to update: ' + deleteError.message);
+        return;
+      }
+
+      // Create new records for each destination
+      if (bigTotal > 0) {
+        const movement = {
+          ...createBaseMovement('big_shop', bigTotal),
+          item: 'both' as const,
+          shirt_bundles: bigShirt,
+          pant_bundles: bigPant,
+          item_summary_display: generateItemSummaryDisplay('both', String(bigShirt), String(bigPant), bigTotal),
+        };
+        onDispatch(movement);
+      }
+
+      if (smallTotal > 0) {
+        const movement = {
+          ...createBaseMovement('small_shop', smallTotal),
+          item: 'both' as const,
+          shirt_bundles: smallShirt,
+          pant_bundles: smallPant,
+          item_summary_display: generateItemSummaryDisplay('both', String(smallShirt), String(smallPant), smallTotal),
+        };
+        onDispatch(movement);
+      }
+
+      toast.success('Dispatch updated successfully!');
+      handleCancelEdit();
+      onDataRefresh?.();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update dispatch');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       if (editingMovement) {
-        // Update mode - only single destination edit supported (not "both")
-        if (formData.item === 'both') {
+        // Edit mode with "both" destination - delete old, create new records
+        if (formData.destination === 'both') {
+          await handleEditWithBothDestination();
+        } else if (formData.item === 'both') {
           const shirtCount = parseInt(formData.shirt_bundles) || 0;
           const pantCount = parseInt(formData.pant_bundles) || 0;
           const totalBundles = shirtCount + pantCount;
@@ -503,7 +575,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                 movementType={formData.movement_type}
               />
 
-              {showBothDialog && !editingMovement && (
+              {showBothDialog && (
                 <BothDestinationDialog
                   data={bothDestinationData}
                   onChange={setBothDestinationData}
