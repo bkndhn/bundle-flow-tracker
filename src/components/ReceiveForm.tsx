@@ -221,6 +221,3 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
     </div>
   );
 }
-
-// Need to import CheckCircle for the confirm receipt section
-import { CheckCircle } from 'lucide-react';
