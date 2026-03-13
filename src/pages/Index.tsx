@@ -416,10 +416,28 @@ const Index = () => {
       if (error) {
         console.error('Error deactivating staff:', error);
         toast.error('Failed to deactivate staff member: ' + error.message);
-      } else {
-        toast.success('Staff member deactivated successfully!');
-        loadData();
+        return;
       }
+
+      // Also deactivate any linked app_user login so the staff can't log in
+      const { data: linkedUsers } = await supabase
+        .from('app_users')
+        .select('id')
+        .eq('linked_staff_id', id);
+
+      if (linkedUsers && linkedUsers.length > 0) {
+        for (const linkedUser of linkedUsers) {
+          // Delete the app_user record so they can no longer log in
+          await supabase
+            .from('app_users')
+            .delete()
+            .eq('id', linkedUser.id);
+        }
+        console.log(`Removed ${linkedUsers.length} login(s) for deactivated staff`);
+      }
+
+      toast.success('Staff member deactivated and login removed!');
+      loadData();
     } catch (error) {
       console.error('Error deactivating staff:', error);
       toast.error('Failed to deactivate staff member');

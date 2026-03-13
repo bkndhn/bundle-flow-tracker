@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Staff, GoodsMovement } from '@/types';
-import { LOCATIONS, TRANSPORT_METHODS } from '@/lib/constants';
+import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateTime12hr } from '@/lib/utils';
-import { Truck, Bike, Footprints, Package, Inbox, CheckCircle } from 'lucide-react';
+import { Package, Inbox, CheckCircle } from 'lucide-react';
 import { DeliveryTimeline } from './dispatch/DeliveryTimeline';
 
 interface ReceiveFormProps {
@@ -33,28 +33,35 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
     condition_notes: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const confirmRef = useRef<HTMLDivElement>(null);
 
-  // Get the destination that this user can receive at
+  // Auto-scroll to confirm receipt section when a movement is selected
+  useEffect(() => {
+    if (selectedMovement && confirmRef.current) {
+      setTimeout(() => {
+        confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [selectedMovement]);
+
   const getUserDestination = (): 'godown' | 'big_shop' | 'small_shop' | null => {
     switch (user?.role) {
       case 'godown_manager': return 'godown';
       case 'big_shop_manager': return 'big_shop';
       case 'small_shop_manager': return 'small_shop';
-      case 'admin': return null; // Admin sees all
+      case 'admin': return null;
       default: return null;
     }
   };
 
   const userDestination = getUserDestination();
 
-  // Filter pending movements: only show movements destined for this user's location
   const filteredPendingMovements = userDestination
     ? pendingMovements.filter(m => m.destination === userDestination)
-    : pendingMovements; // Admin sees all
+    : pendingMovements;
 
   const movement = filteredPendingMovements.find(m => m.id === selectedMovement);
 
-  // Filter staff based on user's location for receiving
   const getFilteredStaff = () => {
     const activeStaff = staff.filter(s => s.is_active !== false);
     if (user?.role === 'godown_manager') {
@@ -63,9 +70,8 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
       return activeStaff.filter(s => s.location === 'small_shop');
     } else if (user?.role === 'big_shop_manager') {
       return activeStaff.filter(s => s.location === 'big_shop');
-    } else {
-      return activeStaff;
     }
+    return activeStaff;
   };
 
   const filteredStaff = getFilteredStaff();
@@ -91,14 +97,11 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
       onReceive(selectedMovement, receiveData);
 
-      // Reset form
       setSelectedMovement('');
       setFormData({
         received_by: user?.linked_staff_id || '',
         condition_notes: '',
       });
-
-      // Toast notification is handled by the parent component (Index.tsx)
     } catch (error) {
       toast.error('Failed to confirm receipt');
     } finally {
@@ -111,11 +114,11 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
       {/* Pending Movements List */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-lg shadow-md">
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl shadow-lg">
             <Inbox className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Pending Receipts</h2>
+            <h2 className="text-lg font-bold text-foreground">Pending Receipts</h2>
             <p className="text-xs text-muted-foreground">
               {filteredPendingMovements.length} shipment{filteredPendingMovements.length !== 1 ? 's' : ''} awaiting receipt
             </p>
@@ -124,13 +127,13 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
 
         <div className="space-y-3">
           {filteredPendingMovements.length === 0 ? (
-            <Card className="backdrop-blur-sm bg-white/70 border-white/30">
+            <Card className="backdrop-blur-sm bg-card/70 border-border/30">
               <CardContent className="py-12">
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-4">
                     <Package className="h-8 w-8 text-emerald-600" />
                   </div>
-                  <p className="text-gray-700 font-semibold text-lg">All Caught Up!</p>
+                  <p className="text-foreground font-semibold text-lg">All Caught Up!</p>
                   <p className="text-muted-foreground text-sm mt-1">No pending shipments to receive</p>
                 </div>
               </CardContent>
@@ -140,83 +143,95 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
               key={m.id}
               className={`cursor-pointer transition-all duration-200 backdrop-blur-sm border ${
                 selectedMovement === m.id
-                  ? 'ring-2 ring-blue-400 bg-blue-50/80 border-blue-200 shadow-lg shadow-blue-100'
-                  : 'bg-white/70 border-white/30 hover:bg-white/90 hover:shadow-md'
+                  ? 'ring-2 ring-primary bg-primary/5 border-primary/30 shadow-lg'
+                  : 'bg-card/70 border-border/30 hover:bg-card/90 hover:shadow-md'
               }`}
               onClick={() => setSelectedMovement(m.id)}
             >
               <CardContent className="p-4">
                 <DeliveryTimeline movement={m} />
+                {selectedMovement !== m.id && (
+                  <div className="mt-3 pt-3 border-t border-border/20 text-center">
+                    <span className="text-xs text-primary font-medium">Tap to confirm receipt →</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Receive Form */}
+      {/* Confirm Receipt Form */}
       {selectedMovement && movement && (
-        <Card className="backdrop-blur-sm bg-white/90 border-blue-200 shadow-lg">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-gray-800 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
-              Confirm Receipt
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Receipt Time (Auto-filled) */}
-              <div className="space-y-2">
-                <Label className="text-gray-700">Receipt Date & Time</Label>
-                <Input
-                  value={formatDateTime12hr(new Date().toISOString())}
-                  disabled
-                  className="bg-gray-50/60"
-                />
-              </div>
+        <div ref={confirmRef}>
+          <Card className="backdrop-blur-sm bg-card/95 border-primary/20 shadow-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-foreground flex items-center gap-2">
+                <div className="bg-emerald-100 p-1.5 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                </div>
+                Confirm Receipt
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Confirm receipt of {movement.bundles_count} {movement.movement_type === 'pieces' ? 'pcs' : 'bundles'} from {LOCATIONS[movement.source] || 'Godown'}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Receipt Time */}
+                <div className="space-y-2">
+                  <Label className="text-foreground text-sm font-medium">Receipt Date & Time</Label>
+                  <Input
+                    value={formatDateTime12hr(new Date().toISOString())}
+                    disabled
+                    className="bg-muted/40 text-muted-foreground"
+                  />
+                </div>
 
-              {/* Received By */}
-              <div className="space-y-2">
-                <Label className="text-gray-700">Received By *</Label>
-                <Select
-                  value={formData.received_by}
-                  onValueChange={(value) => setFormData({ ...formData, received_by: value })}
+                {/* Received By */}
+                <div className="space-y-2">
+                  <Label className="text-foreground text-sm font-medium">Received By *</Label>
+                  <Select
+                    value={formData.received_by}
+                    onValueChange={(value) => setFormData({ ...formData, received_by: value })}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select staff member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredStaff.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name} ({LOCATIONS[member.location]})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-foreground text-sm font-medium">Receive Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Any notes about the received goods condition..."
+                    value={formData.condition_notes}
+                    onChange={(e) => setFormData({ ...formData, condition_notes: e.target.value })}
+                    rows={3}
+                    className="bg-background"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-200 transition-all text-white h-12 text-base font-semibold"
+                  disabled={isSubmitting}
                 >
-                  <SelectTrigger className="bg-white/90">
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredStaff.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name} ({LOCATIONS[member.location]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Receive Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-gray-700">Receive Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any notes about the received goods condition..."
-                  value={formData.condition_notes}
-                  onChange={(e) => setFormData({ ...formData, condition_notes: e.target.value })}
-                  rows={3}
-                  className="bg-white/90"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-200 transition-all"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Confirming Receipt...' : '✓ Confirm Receipt'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  {isSubmitting ? 'Confirming Receipt...' : '✓ Confirm Receipt'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
