@@ -30,7 +30,9 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
       label: 'In Transit',
       description: `${TRANSPORT_METHODS[movement.transport_method] || 'Auto'}${movement.auto_name ? ` - ${movement.auto_name}` : ''}`,
       time: isDispatched ? 'Currently in transit' : undefined,
-      detail: movement.accompanying_person ? `Carried by ${movement.accompanying_person}` : undefined,
+      detail: movement.accompanying_person 
+        ? `${movement.transport_method === 'auto' ? 'Accompanied by' : 'Carried by'} ${movement.accompanying_person}` 
+        : undefined,
       completed: true,
       active: isDispatched,
       icon: Truck,

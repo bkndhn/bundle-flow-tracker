@@ -111,6 +111,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Check if linked staff is deactivated
+      if ((data as any).linked_staff_id) {
+        const { data: staffData } = await supabase
+          .from('staff')
+          .select('is_active')
+          .eq('id', (data as any).linked_staff_id)
+          .single();
+
+        if (staffData && !staffData.is_active) {
+          console.warn('Linked staff is deactivated, logging out');
+          logout();
+          return;
+        }
+      }
+
       // Check if user details changed (email, role, or linked_staff_id)
       if (data.email !== savedUser.email || data.role !== savedUser.role || (data as any).linked_staff_id !== savedUser.linked_staff_id) {
         const updatedUser: AppUser = {
