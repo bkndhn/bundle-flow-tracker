@@ -202,7 +202,6 @@ const Index = () => {
 
   const handleDispatch = async (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Dispatching movement:', movement);
 
       // Check if offline - queue for later
       if (isOffline) {
