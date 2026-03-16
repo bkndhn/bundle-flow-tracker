@@ -164,7 +164,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error || !data) {
-        console.error('Login failed: User not found');
         return false;
       }
 
