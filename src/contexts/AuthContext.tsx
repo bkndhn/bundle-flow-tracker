@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase
         .from('app_users')
-        .select('id, email, role, created_at, password_hash, linked_staff_id')
+        .select('id, email, role, created_at, linked_staff_id')
         .eq('id', savedUser.id)
         .single();
 
@@ -164,17 +164,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error || !data) {
-        console.error('Login failed: User not found');
         return false;
       }
 
-      // Compare password hashes
-      const isValidPassword =
-        data.password_hash === hashedPassword ||
-        data.password_hash?.startsWith('$2b$10$'); // Legacy bcrypt placeholder
-
-      if (!isValidPassword) {
-        console.error('Login failed: Invalid password');
+      // Compare password hashes - only exact match allowed
+      if (data.password_hash !== hashedPassword) {
         return false;
       }
 

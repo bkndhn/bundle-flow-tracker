@@ -202,7 +202,6 @@ const Index = () => {
 
   const handleDispatch = async (movement: Omit<GoodsMovement, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Dispatching movement:', movement);
 
       // Check if offline - queue for later
       if (isOffline) {
@@ -257,7 +256,7 @@ const Index = () => {
         insertData.dispatch_notes = movement.condition_notes;
       }
 
-      console.log('Insert data:', insertData);
+
 
       // Track which user created this dispatch (validate UUID format to avoid invalid input errors)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
