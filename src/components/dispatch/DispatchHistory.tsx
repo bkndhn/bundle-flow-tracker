@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,8 @@ import {
 import { WhatsAppShareDialog } from '@/components/WhatsAppShareDialog';
 import { getWhatsAppSettings, WhatsAppSettings } from '@/services/whatsappService';
 import { DeliveryTimeline } from './DeliveryTimeline';
+import { DispatchHistoryFilters, DispatchFilters } from './DispatchHistoryFilters';
+import { startOfDay, endOfDay } from 'date-fns';
 
 interface DispatchHistoryProps {
   movements: GoodsMovement[];
@@ -37,23 +39,52 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
   const [shareFormat, setShareFormat] = useState<'image' | 'text'>('image');
   const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
-
-  // Filter: only dispatched (not received), visible to dispatching user or admin
-  const filteredMovements = movements.filter(m => {
-    if (m.status !== 'dispatched') return false;
-    if (currentUser.role === 'admin') return true;
-    if ((m as any).created_by_user === currentUser.id) return true;
-    const roleLocationMap: Record<string, string> = {
-      godown_manager: 'godown',
-      big_shop_manager: 'big_shop',
-      small_shop_manager: 'small_shop',
-    };
-    const userLocation = roleLocationMap[currentUser.role];
-    if (userLocation && m.source === userLocation) return true;
-    return false;
+  const [filters, setFilters] = useState<DispatchFilters>({
+    itemType: 'all',
+    source: 'all',
+    destination: 'all',
   });
 
-  if (filteredMovements.length === 0) return null;
+  // Filter: only dispatched (not received), visible to dispatching user or admin
+  const accessFilteredMovements = useMemo(() => {
+    return movements.filter(m => {
+      if (m.status !== 'dispatched') return false;
+      if (currentUser.role === 'admin') return true;
+      if ((m as any).created_by_user === currentUser.id) return true;
+      const roleLocationMap: Record<string, string> = {
+        godown_manager: 'godown',
+        big_shop_manager: 'big_shop',
+        small_shop_manager: 'small_shop',
+      };
+      const userLocation = roleLocationMap[currentUser.role];
+      if (userLocation && m.source === userLocation) return true;
+      return false;
+    });
+  }, [movements, currentUser]);
+
+  // Apply user filters
+  const filteredMovements = useMemo(() => {
+    return accessFilteredMovements.filter(m => {
+      // Date filter
+      if (filters.dateFrom) {
+        const dispatchDate = new Date(m.dispatch_date);
+        if (dispatchDate < startOfDay(filters.dateFrom)) return false;
+      }
+      if (filters.dateTo) {
+        const dispatchDate = new Date(m.dispatch_date);
+        if (dispatchDate > endOfDay(filters.dateTo)) return false;
+      }
+      // Item type filter
+      if (filters.itemType !== 'all' && m.item !== filters.itemType) return false;
+      // Source filter
+      if (filters.source !== 'all' && (m.source || 'godown') !== filters.source) return false;
+      // Destination filter
+      if (filters.destination !== 'all' && m.destination !== filters.destination) return false;
+      return true;
+    });
+  }, [accessFilteredMovements, filters]);
+
+  if (accessFilteredMovements.length === 0) return null;
 
   const canEditDelete = (m: GoodsMovement) => {
     if (m.status === 'received') return false;
@@ -116,58 +147,69 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
             </div>
           </div>
 
-          <div className="space-y-3">
-            {filteredMovements.map((m) => {
-              return (
-                <div
-                  key={m.id}
-                  className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <DeliveryTimeline movement={m} />
-
-                  {/* Action buttons */}
-                  {canEditDelete(m) && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 h-9 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50 transition-colors"
-                        onClick={() => onEdit(m)}
-                      >
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 h-9 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50 transition-colors"
-                        onClick={() => setDeleteId(m.id)}
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" /> Delete
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5 transition-colors"
-                        onClick={() => handleShare(m, 'image')}
-                        title="Share as Image"
-                      >
-                        <Image className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-9 text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5 transition-colors"
-                        onClick={() => handleShare(m, 'text')}
-                        title="Share as Text"
-                      >
-                        <Type className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          {/* Filters */}
+          <div className="mb-4">
+            <DispatchHistoryFilters filters={filters} onFiltersChange={setFilters} />
           </div>
+
+          {filteredMovements.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No dispatches match the selected filters</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredMovements.map((m) => {
+                return (
+                  <div
+                    key={m.id}
+                    className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <DeliveryTimeline movement={m} />
+
+                    {/* Action buttons */}
+                    {canEditDelete(m) && (
+                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-9 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50 transition-colors"
+                          onClick={() => onEdit(m)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-9 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50 transition-colors"
+                          onClick={() => setDeleteId(m.id)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" /> Delete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5 transition-colors"
+                          onClick={() => handleShare(m, 'image')}
+                          title="Share as Image"
+                        >
+                          <Image className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5 transition-colors"
+                          onClick={() => handleShare(m, 'text')}
+                          title="Share as Text"
+                        >
+                          <Type className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 

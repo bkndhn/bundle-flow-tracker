@@ -168,13 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // Compare password hashes
-      const isValidPassword =
-        data.password_hash === hashedPassword ||
-        data.password_hash?.startsWith('$2b$10$'); // Legacy bcrypt placeholder
-
-      if (!isValidPassword) {
-        console.error('Login failed: Invalid password');
+      // Compare password hashes - only exact match allowed
+      if (data.password_hash !== hashedPassword) {
         return false;
       }
 
