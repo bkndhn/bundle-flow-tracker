@@ -29,14 +29,24 @@ window.onunhandledrejection = (event) => {
     console.error('Unhandled promise rejection:', event.reason);
 };
 
-// Clear stale service worker cache on load
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then((registration) => {
-        // Check for updates
-        registration.update();
-    }).catch((err) => {
-        console.warn('Service worker ready failed:', err);
-    });
+// Guard service worker against iframe/preview contexts
+const isInIframe = (() => {
+  try { return window.self !== window.top; } catch { return true; }
+})();
+const isPreviewHost =
+  window.location.hostname.includes('id-preview--') ||
+  window.location.hostname.includes('lovableproject.com');
+
+if (isPreviewHost || isInIframe) {
+  navigator.serviceWorker?.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+} else if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(registration => {
+    registration.update();
+  }).catch(err => {
+    console.warn('Service worker ready failed:', err);
+  });
 }
 
 // Initialize the React app
