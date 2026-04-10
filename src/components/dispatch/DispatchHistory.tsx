@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { GoodsMovement, AppUser } from '@/types';
 import { LOCATIONS, TRANSPORT_METHODS } from '@/lib/constants';
 import { formatDateTime12hr } from '@/lib/utils';
-import { Pencil, Trash2, Image, Type, Truck, Bike, Footprints, Clock, MapPin } from 'lucide-react';
+import { Pencil, Trash2, Image, Type, Truck, Bike, Footprints, Clock, MapPin, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -23,6 +23,7 @@ import { WhatsAppShareDialog } from '@/components/WhatsAppShareDialog';
 import { getWhatsAppSettings, WhatsAppSettings } from '@/services/whatsappService';
 import { DeliveryTimeline } from './DeliveryTimeline';
 import { DispatchHistoryFilters, DispatchFilters } from './DispatchHistoryFilters';
+import { QRCodeDisplay } from './QRCodeDisplay';
 import { startOfDay, endOfDay } from 'date-fns';
 
 interface DispatchHistoryProps {
@@ -35,6 +36,7 @@ interface DispatchHistoryProps {
 
 export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staff }: DispatchHistoryProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [qrMovement, setQrMovement] = useState<GoodsMovement | null>(null);
   const [shareMovement, setShareMovement] = useState<GoodsMovement | null>(null);
   const [shareFormat, setShareFormat] = useState<'image' | 'text'>('image');
   const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings | null>(null);
@@ -188,6 +190,15 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
                         <Button
                           size="sm"
                           variant="outline"
+                          className="h-9 text-xs text-purple-700 border-purple-200 hover:bg-purple-50 px-2.5 transition-colors"
+                          onClick={() => setQrMovement(m)}
+                          title="Show QR Code"
+                        >
+                          <QrCode className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="h-9 text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5 transition-colors"
                           onClick={() => handleShare(m, 'image')}
                           title="Share as Image"
@@ -230,6 +241,15 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code Dialog */}
+      {qrMovement && (
+        <QRCodeDisplay
+          movement={qrMovement}
+          open={!!qrMovement}
+          onClose={() => setQrMovement(null)}
+        />
+      )}
 
       {/* WhatsApp Share Dialog */}
       {whatsAppSettings && shareMovement && (
