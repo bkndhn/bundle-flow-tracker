@@ -166,7 +166,7 @@ export const Layout = memo(function Layout({
       </main>
 
       {/* Bottom Navigation - Enhanced with vibrant colors */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-t-2 border-blue-500/30 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+      <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-t-2 border-blue-500/30 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
         <div className={`flex ${navigation.length > 5 ? 'overflow-x-auto scrollbar-hide' : ''} ${navigation.length <= 5 ? `grid grid-cols-${navigation.length}` : ''}`}>
           {navigation.map((item) => {
             const Icon = item.icon;

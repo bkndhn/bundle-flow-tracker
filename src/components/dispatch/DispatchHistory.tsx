@@ -137,14 +137,14 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
 
   return (
     <>
-      <Card className="backdrop-blur-sm bg-white/80 border-white/40 shadow-xl mt-4">
+      <Card className="backdrop-blur-sm bg-card/80 border-border/40 shadow-xl mt-4">
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-2 rounded-lg shadow-md">
               <Clock className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Recent Dispatches</h3>
+              <h3 className="text-lg font-bold text-foreground">Recent Dispatches</h3>
               <p className="text-xs text-muted-foreground">Edit or delete before goods are received</p>
             </div>
           </div>
@@ -164,7 +164,7 @@ export function DispatchHistory({ movements, currentUser, onEdit, onDelete, staf
                 return (
                   <div
                     key={m.id}
-                    className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+                    className="bg-card rounded-xl border border-border/50 p-4 shadow-sm hover:shadow-md transition-shadow"
                   >
                     <DeliveryTimeline movement={m} />
 
