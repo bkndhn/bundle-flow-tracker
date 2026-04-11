@@ -16,6 +16,7 @@ import {
 import { PWAInstallPrompt } from './PWAInstallPrompt';
 import { NotificationStatus } from './NotificationStatus';
 import { OfflineIndicator } from './OfflineIndicator';
+import { ThemeToggle } from './ThemeToggle';
 
 interface LayoutProps {
   children: ReactNode;
@@ -84,7 +85,7 @@ export const Layout = memo(function Layout({
   const navigation = getNavigationForRole();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <PWAInstallPrompt />
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
@@ -111,15 +112,15 @@ export const Layout = memo(function Layout({
       </AlertDialog>
 
       {/* Header */}
-      <header className="backdrop-blur-sm bg-white/70 border-b border-white/30 shadow-sm">
+      <header className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 border-b border-white/30 dark:border-slate-700/30 shadow-sm">
         <div className="px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-2 rounded-lg shadow-md">
               <Truck className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">Goods Movement Tracker</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground">Goods Movement Tracker</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {user?.role === 'admin' && 'Admin Portal'}
                 {user?.role === 'godown_manager' && 'Godown Management'}
                 {user?.role === 'small_shop_manager' && 'Small Shop Management'}
@@ -127,8 +128,10 @@ export const Layout = memo(function Layout({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-gray-600 text-sm hidden sm:block">{user?.email}</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className="text-muted-foreground text-xs hidden sm:block">{user?.email}</span>
+            {/* Theme Toggle */}
+            <ThemeToggle />
             {/* Offline Indicator */}
             <OfflineIndicator
               isOffline={isOffline}
@@ -141,7 +144,7 @@ export const Layout = memo(function Layout({
               onClick={handleLogoutClick}
               variant="outline"
               size="sm"
-              className="bg-white/60 border-gray-200 text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-xs sm:text-sm px-2 sm:px-3"
+              className="bg-background/60 border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs px-2 sm:px-3"
             >
               <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
               <span className="hidden sm:inline">Logout</span>
