@@ -77,7 +77,7 @@ const Index = () => {
   const [whatsAppSettings, setWhatsAppSettings] = useState<WhatsAppSettings | null>(null);
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
   const [batchDispatchData, setBatchDispatchData] = useState<any[]>([]);
-  const [dispatchBatchTimeout, setDispatchBatchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [dispatchBatchTimeout, setDispatchBatchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Default page based on role
   const getDefaultPage = useCallback(() => {
