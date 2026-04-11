@@ -11,8 +11,9 @@ import { LOCATIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateTime12hr } from '@/lib/utils';
-import { Package, Inbox, CheckCircle } from 'lucide-react';
+import { Package, Inbox, CheckCircle, QrCode } from 'lucide-react';
 import { DeliveryTimeline } from './dispatch/DeliveryTimeline';
+import { QRScanner } from './dispatch/QRScanner';
 
 interface ReceiveFormProps {
   staff: Staff[];
@@ -28,6 +29,7 @@ interface ReceiveFormProps {
 export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormProps) {
   const { user } = useAuth();
   const [selectedMovement, setSelectedMovement] = useState<string>('');
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [formData, setFormData] = useState({
     received_by: user?.linked_staff_id || '',
     condition_notes: '',
@@ -110,19 +112,42 @@ export function ReceiveForm({ staff, pendingMovements, onReceive }: ReceiveFormP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 space-y-6">
+      {/* QR Scanner */}
+      <QRScanner
+        open={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        pendingMovements={filteredPendingMovements}
+        onMovementFound={(id) => {
+          setSelectedMovement(id);
+          setShowQRScanner(false);
+          toast.success('Dispatch found! Confirm receipt below.');
+        }}
+      />
+
       {/* Pending Movements List */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl shadow-lg">
-            <Inbox className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl shadow-lg">
+              <Inbox className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Pending Receipts</h2>
+              <p className="text-xs text-muted-foreground">
+                {filteredPendingMovements.length} shipment{filteredPendingMovements.length !== 1 ? 's' : ''} awaiting receipt
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-foreground">Pending Receipts</h2>
-            <p className="text-xs text-muted-foreground">
-              {filteredPendingMovements.length} shipment{filteredPendingMovements.length !== 1 ? 's' : ''} awaiting receipt
-            </p>
-          </div>
+          <Button
+            onClick={() => setShowQRScanner(true)}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+          >
+            <QrCode className="h-4 w-4" />
+            <span className="hidden sm:inline">Scan QR</span>
+          </Button>
         </div>
 
         <div className="space-y-3">
