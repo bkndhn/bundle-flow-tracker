@@ -415,7 +415,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={transportFilter} onValueChange={(value: any) => handleFilterChange(setTransportFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Transport" />
                 </SelectTrigger>
                 <SelectContent>
