@@ -343,13 +343,13 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
 
   return (
     <div className="p-4 space-y-4">
-      <Card className="backdrop-blur-sm bg-white/80 border-white/40">
+      <Card className="backdrop-blur-sm bg-card/80 border-border/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-800">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Calendar className="h-5 w-5" />
             Movement Reports
           </CardTitle>
-          <CardDescription className="text-gray-600">
+          <CardDescription className="text-muted-foreground">
             Complete history of all goods movements with detailed information
           </CardDescription>
         </CardHeader>
@@ -363,13 +363,13 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                   placeholder="Search all columns: staff, auto, notes, dates..."
                   value={searchTerm}
                   onChange={(e) => handleFilterChange(setSearchTerm, e.target.value)}
-                  className="pl-10 bg-white/90"
+                  className="pl-10 bg-background"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 lg:flex lg:gap-2 gap-2">
               <Select value={statusFilter} onValueChange={(value: any) => handleFilterChange(setStatusFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -380,7 +380,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={locationFilter} onValueChange={(value: any) => handleFilterChange(setLocationFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -392,7 +392,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={itemFilter} onValueChange={(value: any) => handleFilterChange(setItemFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Item" />
                 </SelectTrigger>
                 <SelectContent>
@@ -404,7 +404,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={movementTypeFilter} onValueChange={(value: any) => handleFilterChange(setMovementTypeFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -415,7 +415,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               </Select>
 
               <Select value={transportFilter} onValueChange={(value: any) => handleFilterChange(setTransportFilter, value)}>
-                <SelectTrigger className="h-9 bg-white/90 w-full lg:flex-1">
+                <SelectTrigger className="h-9 bg-background w-full lg:flex-1">
                   <SelectValue placeholder="Transport" />
                 </SelectTrigger>
                 <SelectContent>
@@ -523,38 +523,38 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50/80 p-3 rounded-lg backdrop-blur-sm">
-              <div className="text-sm text-blue-600 font-medium">Total Movements</div>
-              <div className="text-2xl font-bold text-blue-900">
+            <div className="bg-blue-50 dark:bg-blue-950/50 p-3 rounded-lg backdrop-blur-sm border border-blue-200 dark:border-blue-800">
+              <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Movements</div>
+              <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                 {new Set(filteredMovements.map(m => m.id)).size}
               </div>
             </div>
-            <div className="bg-green-50/80 p-3 rounded-lg backdrop-blur-sm">
-              <div className="text-sm text-green-600 font-medium">Completed</div>
-              <div className="text-2xl font-bold text-green-900">
+            <div className="bg-green-50 dark:bg-green-950/50 p-3 rounded-lg backdrop-blur-sm border border-green-200 dark:border-green-800">
+              <div className="text-sm text-green-600 dark:text-green-400 font-medium">Completed</div>
+              <div className="text-2xl font-bold text-green-900 dark:text-green-100">
                 {new Set(filteredMovements.filter(m => m.status === 'received').map(m => m.id)).size}
               </div>
             </div>
-            <div className="bg-yellow-50/80 p-3 rounded-lg backdrop-blur-sm">
-              <div className="text-sm text-yellow-600 font-medium">Pending</div>
-              <div className="text-2xl font-bold text-yellow-900">
+            <div className="bg-yellow-50 dark:bg-yellow-950/50 p-3 rounded-lg backdrop-blur-sm border border-yellow-200 dark:border-yellow-800">
+              <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Pending</div>
+              <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
                 {new Set(filteredMovements.filter(m => m.status === 'dispatched').map(m => m.id)).size}
               </div>
             </div>
-            <div className="bg-purple-50/80 p-3 rounded-lg backdrop-blur-sm">
-              <div className="text-sm text-purple-600 font-medium">Total Volume</div>
-              <div className="text-2xl font-bold text-purple-900">
+            <div className="bg-purple-50 dark:bg-purple-950/50 p-3 rounded-lg backdrop-blur-sm border border-purple-200 dark:border-purple-800">
+              <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Total Volume</div>
+              <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                 {filteredMovements.reduce((sum, m) => sum + m.bundles_count, 0)}
               </div>
             </div>
           </div>
 
           {/* Movements Table */}
-          <div className="border rounded-lg overflow-x-auto bg-white/60 backdrop-blur-sm">
+          <div className="border border-border rounded-lg overflow-x-auto bg-card/60 backdrop-blur-sm">
             <div className="min-w-[1400px]">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80">
+                  <TableRow className="bg-muted/50">
                     <TableHead className="w-10">
                       <Checkbox 
                         checked={isAllPageSelected && paginatedMovements.length > 0}
@@ -583,7 +583,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                 <TableBody>
                   {paginatedMovements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={17} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
                         No movements found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -595,7 +595,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                       return (
                         <TableRow 
                           key={rowKey} 
-                          className={`hover:bg-gray-50/60 cursor-pointer ${isSelected ? 'bg-blue-50/60' : ''}`}
+                          className={`hover:bg-muted/50 cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
                           onClick={() => toggleRowSelection(rowKey)}
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
@@ -722,16 +722,28 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 px-2 gap-3">
-              <div className="text-sm text-gray-600 text-center sm:text-left">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
                 Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredMovements.length)} of {filteredMovements.length} entries
               </div>
               <div className="flex items-center gap-1 flex-wrap justify-center">
+                {/* First Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="bg-card/80 px-2"
+                  title="First page"
+                >
+                  <ChevronLeft className="h-4 w-4" /><ChevronLeft className="h-4 w-4 -ml-2" />
+                </Button>
+                {/* Previous */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="bg-white/80 px-2 sm:px-3"
+                  className="bg-card/80 px-2 sm:px-3"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   <span className="hidden sm:inline">Previous</span>
@@ -754,22 +766,34 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`${currentPage === pageNum ? "bg-blue-600" : "bg-white/80"} min-w-[36px]`}
+                        className={`${currentPage === pageNum ? "bg-primary text-primary-foreground" : "bg-card/80"} min-w-[36px]`}
                       >
                         {pageNum}
                       </Button>
                     );
                   })}
                 </div>
+                {/* Next */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="bg-white/80 px-2 sm:px-3"
+                  className="bg-card/80 px-2 sm:px-3"
                 >
                   <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
+                </Button>
+                {/* Last Page */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="bg-card/80 px-2"
+                  title="Last page"
+                >
+                  <ChevronRight className="h-4 w-4" /><ChevronRight className="h-4 w-4 -ml-2" />
                 </Button>
               </div>
             </div>

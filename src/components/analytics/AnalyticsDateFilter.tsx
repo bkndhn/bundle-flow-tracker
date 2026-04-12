@@ -84,7 +84,7 @@ export const AnalyticsDateFilter = memo(function AnalyticsDateFilter({
   }, [dateRange.from, onDateRangeChange]);
 
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm">
+    <Card className="bg-card/80 backdrop-blur-sm border-border shadow-sm">
       <CardContent className="p-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -93,7 +93,7 @@ export const AnalyticsDateFilter = memo(function AnalyticsDateFilter({
           </div>
 
           <Select value={quickFilter} onValueChange={handleQuickFilterChange}>
-            <SelectTrigger className="w-[140px] h-9 bg-white">
+            <SelectTrigger className="w-[140px] h-9 bg-background">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -112,7 +112,7 @@ export const AnalyticsDateFilter = memo(function AnalyticsDateFilter({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 px-3 bg-white justify-start text-left font-normal",
+                    "h-9 px-3 bg-background justify-start text-left font-normal",
                     !dateRange.from && "text-muted-foreground"
                   )}
                 >
@@ -140,7 +140,7 @@ export const AnalyticsDateFilter = memo(function AnalyticsDateFilter({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 px-3 bg-white justify-start text-left font-normal",
+                    "h-9 px-3 bg-background justify-start text-left font-normal",
                     !dateRange.to && "text-muted-foreground"
                   )}
                 >

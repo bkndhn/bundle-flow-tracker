@@ -26,14 +26,14 @@ const StatCard = memo(function StatCard({
   gradient?: string;
 }) {
   return (
-    <Card className={`backdrop-blur-xl ${gradient} border-white/30 shadow-lg`}>
+    <Card className={`backdrop-blur-xl ${gradient} border-white/40 shadow-lg`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white font-semibold text-sm drop-shadow-sm">{label}</p>
-            <p className="text-white text-3xl font-extrabold drop-shadow-md">{value}</p>
+            <p className="text-white font-bold text-sm drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">{label}</p>
+            <p className="text-white text-3xl font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{value}</p>
           </div>
-          <Icon className={`h-8 w-8 ${iconColor} drop-shadow-sm`} />
+          <Icon className={`h-8 w-8 ${iconColor} drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)]`} />
         </div>
       </CardContent>
     </Card>
