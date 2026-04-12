@@ -263,7 +263,7 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
     : 0;
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 text-foreground">
       {/* Date Range Filter */}
       <AnalyticsDateFilter 
         dateRange={dateRange} 
@@ -303,10 +303,10 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
       </div>
 
       {/* Movement Trends Chart */}
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+          <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             Movement Trends
           </CardTitle>
           <CardDescription>
@@ -373,7 +373,7 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
 
       {/* Item-wise Charts Section */}
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold px-1">Item-wise Analysis</h2>
+        <h2 className="text-lg font-semibold px-1 text-foreground">Item-wise Analysis</h2>
         <ItemWiseCharts
           movements={filteredMovements}
           metricFilter={metricFilter}
@@ -386,10 +386,10 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
       {/* Two column layout for smaller charts */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Peak Hours Analysis with 12-hour format */}
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5 text-purple-600" />
+            <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+              <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               Peak Hours Analysis
             </CardTitle>
             <CardDescription>Dispatch activity by hour of day (12-hour format)</CardDescription>
@@ -429,10 +429,10 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
         </Card>
 
         {/* Destination Distribution */}
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Package className="h-5 w-5 text-green-600" />
+            <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+              <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
               Destination Distribution
             </CardTitle>
             <CardDescription>Movement distribution by destination</CardDescription>
