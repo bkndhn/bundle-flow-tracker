@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -175,7 +174,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
       shirt_bundles: '',
       pant_bundles: ''
     });
-    // Reset both destination data when destination changes
     setBothDestinationData({
       big_shop: { shirt: '', pant: '' },
       small_shop: { shirt: '', pant: '' }
@@ -192,7 +190,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
     });
   };
 
-  // Handle edit: populate form with movement data
   const handleEdit = (movement: GoodsMovement) => {
     setEditingMovement(movement);
 
@@ -211,13 +208,11 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
       notes: movement.dispatch_notes || movement.condition_notes || '',
     });
 
-    // Reset both destination data
     setBothDestinationData({
       big_shop: { shirt: '', pant: '' },
       small_shop: { shirt: '', pant: '' }
     });
 
-    // Scroll to form
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -231,7 +226,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
   };
 
   const handleDelete = (movementId: string) => {
-    // Refresh data
     onDataRefresh?.();
   };
 
@@ -338,7 +332,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
     if (!editingMovement) return;
 
     try {
-      // Validate both destination data
       const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
       const bigPant = parseInt(bothDestinationData.big_shop.pant) || 0;
       const bigTotal = bigShirt + bigPant;
@@ -351,7 +344,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
         return;
       }
 
-      // Delete the original record
       const { error: deleteError } = await supabase
         .from('goods_movements')
         .delete()
@@ -362,7 +354,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
         return;
       }
 
-      // Create new records for each destination
       if (bigTotal > 0) {
         const movement = {
           ...createBaseMovement('big_shop', bigTotal),
@@ -399,7 +390,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
 
     try {
       if (editingMovement) {
-        // Edit mode with "both" destination - delete old, create new records
         if (formData.destination === 'both') {
           await handleEditWithBothDestination();
         } else if (formData.item === 'both') {
@@ -421,7 +411,6 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
           await handleUpdate(createMovement(formData.destination as 'big_shop' | 'small_shop', formData.item as 'shirt' | 'pant', formData.bundles_count));
         }
       } else {
-        // New dispatch mode
         if (formData.destination === 'both') {
           const newMovements = [];
           const bigShirt = parseInt(bothDestinationData.big_shop.shirt) || 0;
@@ -480,11 +469,25 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
               setIsSubmitting(false);
               return;
             }
+
+            if (!formData.item) {
+              toast.error('Please select an item type');
+              setIsSubmitting(false);
+              return;
+            }
+
+            if (!formData.destination) {
+              toast.error('Please select a destination');
+              setIsSubmitting(false);
+              return;
+            }
+
             onDispatch(createMovement(formData.destination as 'big_shop' | 'small_shop', formData.item as 'shirt' | 'pant', formData.bundles_count));
           }
         }
+      }
 
-        // Reset form after new dispatch
+      if (!editingMovement) {
         setFormData(getInitialFormData());
         setBothDestinationData({
           big_shop: { shirt: '', pant: '' },
@@ -499,22 +502,22 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4">
       <div ref={formRef}>
-        <Card className="backdrop-blur-sm bg-white/80 border-white/40 shadow-xl">
+        <Card className="backdrop-blur-sm bg-card/80 border-border/40 shadow-xl">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-gray-800 text-xl font-bold">
+              <CardTitle className="text-foreground text-xl font-bold">
                 {editingMovement ? 'Edit Dispatch' : 'Dispatch Goods'}
               </CardTitle>
               {editingMovement && (
-                <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-gray-500">
+                <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="text-muted-foreground">
                   <X className="h-4 w-4 mr-1" /> Cancel Edit
                 </Button>
               )}
             </div>
             {editingMovement && (
-              <p className="text-sm text-amber-600 font-medium">
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
                 Editing dispatch from {formatDateTime12hr(editingMovement.dispatch_date)}
               </p>
             )}
@@ -522,19 +525,19 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-gray-700">Dispatch Date & Time</Label>
+                <Label className="text-foreground">Dispatch Date & Time</Label>
                 <Input
                   value={editingMovement
                     ? formatDateTime12hr(editingMovement.dispatch_date)
                     : formatDateTime12hr(new Date().toISOString())
                   }
                   disabled
-                  className="bg-gray-50/60"
+                  className="bg-muted/40"
                 />
               </div>
 
               <div className="space-y-3">
-                <Label className="text-gray-700">Movement Type</Label>
+                <Label className="text-foreground">Movement Type</Label>
                 <RadioGroup
                   value={formData.movement_type}
                   onValueChange={(value) => handleMovementTypeChange(value as 'bundles' | 'pieces')}
@@ -542,11 +545,11 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="bundles" id="bundles" />
-                    <Label htmlFor="bundles" className="text-gray-700 font-medium">Bundles</Label>
+                    <Label htmlFor="bundles" className="text-foreground font-medium">Bundles</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pieces" id="pieces" />
-                    <Label htmlFor="pieces" className="text-gray-700 font-medium">Pieces</Label>
+                    <Label htmlFor="pieces" className="text-foreground font-medium">Pieces</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -583,12 +586,12 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
               )}
 
               <div className="space-y-2">
-                <Label className="text-gray-700">Sent By *</Label>
+                <Label className="text-foreground">Sent By *</Label>
                 <Select
                   value={formData.sent_by}
                   onValueChange={(value) => setFormData({ ...formData, sent_by: value })}
                 >
-                  <SelectTrigger className="bg-white/90">
+                  <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
@@ -609,7 +612,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
               {showAutoFields && (
                 <>
                   <div className="space-y-3">
-                    <Label className="text-gray-700">Auto Fare Payment</Label>
+                    <Label className="text-foreground">Auto Fare Payment</Label>
                     <RadioGroup
                       value={formData.fare_payment}
                       onValueChange={(value) => setFormData({ ...formData, fare_payment: value })}
@@ -617,21 +620,21 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="paid_by_sender" id="paid_sender" />
-                        <Label htmlFor="paid_sender" className="text-gray-700 text-sm">Paid by Sender</Label>
+                        <Label htmlFor="paid_sender" className="text-foreground text-sm">Paid by Sender</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="to_be_paid_by_small_shop" id="paid_small_shop" />
-                        <Label htmlFor="paid_small_shop" className="text-gray-700 text-sm">To Be Paid by Small Shop</Label>
+                        <Label htmlFor="paid_small_shop" className="text-foreground text-sm">To Be Paid by Small Shop</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="to_be_paid_by_big_shop" id="paid_big_shop" />
-                        <Label htmlFor="paid_big_shop" className="text-gray-700 text-sm">To Be Paid by Big Shop</Label>
+                        <Label htmlFor="paid_big_shop" className="text-foreground text-sm">To Be Paid by Big Shop</Label>
                       </div>
                     </RadioGroup>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="auto_name" className="text-gray-700">Auto Name *</Label>
+                    <Label htmlFor="auto_name" className="text-foreground">Auto Name *</Label>
                     <Input
                       id="auto_name"
                       list="auto-list"
@@ -639,7 +642,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                       value={formData.auto_name}
                       onChange={(e) => setFormData({ ...formData, auto_name: e.target.value })}
                       required
-                      className="bg-white/90"
+                      className="bg-background"
                     />
                     <datalist id="auto-list">
                       {autoSuggestions.map(name => (
@@ -651,7 +654,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="accompanying" className="text-gray-700">
+                <Label htmlFor="accompanying" className="text-foreground">
                   Person {showAutoFields ? 'Accompanying Auto' : 'Carrying Goods'} *
                 </Label>
                 <Input
@@ -661,7 +664,7 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
                   value={formData.accompanying_person}
                   onChange={(e) => setFormData({ ...formData, accompanying_person: e.target.value })}
                   required
-                  className="bg-white/90"
+                  className="bg-background"
                 />
                 <datalist id="accompanying-list">
                   {accompanyingSuggestions.map(name => (
@@ -671,20 +674,20 @@ export function DispatchForm({ staff, movements, userRole, onDispatch, onDataRef
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes" className="text-gray-700">Dispatch Notes (Optional)</Label>
+                <Label htmlFor="notes" className="text-foreground">Dispatch Notes (Optional)</Label>
                 <Textarea
                   id="notes"
                   placeholder="Any notes about the dispatch (visible in reports)..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="bg-white/90"
+                  className="bg-background"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
                 disabled={isSubmitting}
               >
                 {isSubmitting

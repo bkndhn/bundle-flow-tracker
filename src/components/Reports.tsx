@@ -438,7 +438,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                className="h-9 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
                 onClick={handlePrintAll}
                 disabled={filteredMovements.length === 0}
               >
@@ -448,7 +448,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                className="h-9 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700"
                 onClick={handlePrintSelected}
                 disabled={selectedRows.size === 0}
               >
@@ -458,7 +458,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                className="h-9 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700"
                 onClick={() => exportToExcel(false)}
                 disabled={filteredMovements.length === 0}
               >
@@ -468,7 +468,7 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                className="h-9 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700"
                 onClick={() => exportToExcel(true)}
                 disabled={selectedRows.size === 0}
               >
@@ -609,18 +609,18 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                             {formatDateTime(movement.dispatch_date)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="capitalize bg-white/80">
+                            <Badge variant="outline" className="capitalize">
                               {movement.item}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {(!movement.movement_type || movement.movement_type === 'bundles') ? (
-                              <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                              <Badge variant="outline">{movement.bundles_count}</Badge>
                             ) : '-'}
                           </TableCell>
                           <TableCell>
                             {movement.movement_type === 'pieces' ? (
-                              <Badge variant="outline" className="bg-white/80">{movement.bundles_count}</Badge>
+                              <Badge variant="outline">{movement.bundles_count}</Badge>
                             ) : '-'}
                           </TableCell>
                           <TableCell>
@@ -635,25 +635,25 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                           </TableCell>
                           <TableCell>
                             {movement.transport_method === 'auto' && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
                                 <Truck className="h-3 w-3 mr-1" />
                                 Auto
                               </Badge>
                             )}
                             {movement.transport_method === 'bike' && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Badge variant="outline" className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
                                 <Bike className="h-3 w-3 mr-1" />
                                 Bike
                               </Badge>
                             )}
                             {movement.transport_method === 'by_walk' && (
-                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                              <Badge variant="outline" className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700">
                                 <Footprints className="h-3 w-3 mr-1" />
                                 Walk
                               </Badge>
                             )}
                             {!movement.transport_method && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
                                 <Truck className="h-3 w-3 mr-1" />
                                 Auto
                               </Badge>
@@ -662,16 +662,16 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                           <TableCell className="font-medium whitespace-nowrap">
                             {movement.transport_method === 'auto' || !movement.transport_method ? (
                               movement.auto_name || (
-                                <span className="text-gray-400 italic text-sm">Not specified</span>
+                                <span className="text-muted-foreground italic text-sm">Not specified</span>
                               )
                             ) : (
-                              <span className="text-gray-400 italic text-sm">-</span>
+                              <span className="text-muted-foreground italic text-sm">-</span>
                             )}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{movement.sent_by_name || 'Unknown'}</TableCell>
                           <TableCell className="whitespace-nowrap">
                             {movement.accompanying_person || (
-                              <span className="text-gray-400 italic text-sm">None</span>
+                              <span className="text-muted-foreground italic text-sm">None</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -680,19 +680,19 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                                 {movement.fare_display_msg || FARE_PAYMENT_OPTIONS[movement.fare_payment]}
                               </span>
                             ) : (
-                              <span className="text-gray-400 italic text-sm">-</span>
+                              <span className="text-muted-foreground italic text-sm">-</span>
                             )}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {movement.received_by_name || (
-                              <span className="text-gray-400 italic text-sm">Pending</span>
+                              <span className="text-muted-foreground italic text-sm">Pending</span>
                             )}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {movement.received_at ? (
                               formatDateTime(movement.received_at)
                             ) : (
-                              <span className="text-gray-400 italic text-sm">Pending</span>
+                              <span className="text-muted-foreground italic text-sm">Pending</span>
                             )}
                           </TableCell>
                           <TableCell>{getStatusBadge(movement.status)}</TableCell>
@@ -700,14 +700,14 @@ export const Reports = memo(function Reports({ movements }: ReportsProps) {
                             {movement.dispatch_notes || movement.condition_notes ? (
                               <span className="text-sm line-clamp-2 max-w-[150px]">{movement.dispatch_notes || movement.condition_notes}</span>
                             ) : (
-                              <span className="text-gray-400 italic text-sm">-</span>
+                              <span className="text-muted-foreground italic text-sm">-</span>
                             )}
                           </TableCell>
                           <TableCell>
                             {movement.receive_notes ? (
                               <span className="text-sm line-clamp-2 max-w-[150px]">{movement.receive_notes}</span>
                             ) : (
-                              <span className="text-gray-400 italic text-sm">-</span>
+                              <span className="text-muted-foreground italic text-sm">-</span>
                             )}
                           </TableCell>
                         </TableRow>

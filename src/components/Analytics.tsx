@@ -327,18 +327,19 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
                     <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis 
                   dataKey="shortDate" 
                   tick={{ fontSize: 11 }}
-                  stroke="#9ca3af"
+                  className="fill-muted-foreground"
                 />
-                <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
+                    color: 'hsl(var(--foreground))',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }}
                   labelFormatter={(value, payload) => {
@@ -398,22 +399,23 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={peakHoursData.filter(h => h.hourNum >= 6 && h.hourNum <= 22)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis 
                     dataKey="hour" 
                     tick={{ fontSize: 9 }}
-                    stroke="#9ca3af"
+                    className="fill-muted-foreground"
                     interval={1}
                     angle={-45}
                     textAnchor="end"
                     height={50}
                   />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      color: 'hsl(var(--foreground))',
                     }}
                   />
                   <Bar 
@@ -460,9 +462,10 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
                       name
                     ]}
                     contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      color: 'hsl(var(--foreground))',
                     }}
                   />
                   <Legend />
@@ -487,18 +490,19 @@ export const Analytics = memo(function Analytics({ movements }: AnalyticsProps) 
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={forecastData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis 
                     dataKey="date" 
                     tick={{ fontSize: 11 }}
-                    stroke="#9ca3af"
+                    className="fill-muted-foreground"
                   />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" />
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      color: 'hsl(var(--foreground))',
                     }}
                     formatter={(value: number, name: string) => [
                       value,

@@ -22,9 +22,9 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
       detail: movement.sent_by_name ? `By ${movement.sent_by_name}` : undefined,
       completed: true,
       icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      borderColor: 'border-blue-400',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/50',
+      borderColor: 'border-blue-400 dark:border-blue-500',
     },
     {
       label: 'In Transit',
@@ -36,9 +36,9 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
       completed: true,
       active: isDispatched,
       icon: Truck,
-      color: isDispatched ? 'text-amber-600' : 'text-amber-600',
-      bgColor: isDispatched ? 'bg-amber-100' : 'bg-amber-100',
-      borderColor: isDispatched ? 'border-amber-400' : 'border-amber-400',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: isDispatched ? 'bg-amber-100 dark:bg-amber-900/50' : 'bg-amber-100 dark:bg-amber-900/50',
+      borderColor: isDispatched ? 'border-amber-400 dark:border-amber-500' : 'border-amber-400 dark:border-amber-500',
     },
     {
       label: 'Received',
@@ -47,9 +47,9 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
       detail: movement.received_by_name ? `By ${movement.received_by_name}` : undefined,
       completed: isReceived,
       icon: CheckCircle2,
-      color: isReceived ? 'text-emerald-600' : 'text-gray-400',
-      bgColor: isReceived ? 'bg-emerald-100' : 'bg-gray-100',
-      borderColor: isReceived ? 'border-emerald-400' : 'border-gray-300',
+      color: isReceived ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+      bgColor: isReceived ? 'bg-emerald-100 dark:bg-emerald-900/50' : 'bg-muted',
+      borderColor: isReceived ? 'border-emerald-400 dark:border-emerald-500' : 'border-border',
     },
   ];
 
@@ -57,7 +57,7 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
     <div className="relative">
       {/* Route header */}
       <div className="flex items-center gap-2 mb-4 px-1">
-        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium">
+        <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 text-xs font-medium">
           {movement.bundles_count} {movement.movement_type === 'pieces' ? 'Pcs' : 'Bundles'}
         </Badge>
         <Badge variant="outline" className="capitalize text-xs">
@@ -81,8 +81,8 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
                   step.completed && steps[index + 1].completed
                     ? 'bg-gradient-to-b from-blue-400 to-emerald-400'
                     : step.completed
-                    ? 'bg-gradient-to-b from-blue-400 to-gray-300'
-                    : 'bg-gray-200'
+                    ? 'bg-gradient-to-b from-blue-400 to-border'
+                    : 'bg-border'
                 }`}
               />
             )}
@@ -94,22 +94,22 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
                   ? `${step.bgColor} ${step.borderColor} animate-pulse`
                   : step.completed
                   ? `${step.bgColor} ${step.borderColor}`
-                  : 'bg-gray-50 border-gray-300'
+                  : 'bg-muted border-border'
               }`}
             >
-              <step.icon className={`h-3 w-3 ${step.completed ? step.color : 'text-gray-400'}`} />
+              <step.icon className={`h-3 w-3 ${step.completed ? step.color : 'text-muted-foreground'}`} />
             </div>
 
             {/* Step content */}
             <div className={`rounded-lg p-3 transition-all ${
               step.active
-                ? 'bg-amber-50/80 border border-amber-200 shadow-sm'
+                ? 'bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 shadow-sm'
                 : step.completed
-                ? 'bg-white/60'
-                : 'bg-gray-50/40'
+                ? 'bg-card/60'
+                : 'bg-muted/40'
             }`}>
               <div className="flex items-center justify-between mb-0.5">
-                <span className={`text-sm font-semibold ${step.completed ? step.color : 'text-gray-400'}`}>
+                <span className={`text-sm font-semibold ${step.completed ? step.color : 'text-muted-foreground'}`}>
                   {step.label}
                 </span>
                 {step.active && (
@@ -118,7 +118,7 @@ export function DeliveryTimeline({ movement }: DeliveryTimelineProps) {
                   </Badge>
                 )}
               </div>
-              <p className={`text-xs ${step.completed ? 'text-gray-600' : 'text-gray-400'}`}>
+              <p className={`text-xs ${step.completed ? 'text-foreground/70' : 'text-muted-foreground'}`}>
                 {step.description}
               </p>
               {step.time && (

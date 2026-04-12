@@ -48,7 +48,7 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
       type,
       message
     };
-    setLogs(prev => [entry, ...prev].slice(0, 50)); // Keep last 50 entries
+    setLogs(prev => [entry, ...prev].slice(0, 50));
   };
 
   const refreshStatus = async () => {
@@ -69,12 +69,9 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
 
   useEffect(() => {
     refreshStatus();
-    
-    // Poll connection status every 5 seconds
     const interval = setInterval(() => {
       setConnectionStatus(getConnectionStatus());
     }, 5000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -83,7 +80,6 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
       addLog('info', 'Requesting notification permission...');
       const success = await initializeNotifications();
       setPermission(getNotificationPermission());
-      
       if (success) {
         addLog('success', 'Notification permission granted!');
         toast.success('Notifications enabled!');
@@ -100,7 +96,6 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
     try {
       addLog('info', 'Sending test notification...');
       const success = await sendTestNotification();
-      
       if (success) {
         addLog('success', 'Test notification sent!');
       } else {
@@ -117,12 +112,10 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
       toast.error('Missing user information for reconnect');
       return;
     }
-
     try {
       addLog('info', 'Forcing reconnection to realtime channel...');
       const success = await forceReconnect(userRole, userId);
       setConnectionStatus(getConnectionStatus());
-      
       if (success) {
         addLog('success', 'Reconnected successfully!');
         toast.success('Reconnected to notification service');
@@ -141,10 +134,10 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
 
   const getPermissionBadge = () => {
     const variants: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-      granted: { icon: <CheckCircle className="h-3 w-3" />, color: 'bg-green-100 text-green-700', label: 'Granted' },
-      denied: { icon: <XCircle className="h-3 w-3" />, color: 'bg-red-100 text-red-700', label: 'Denied' },
-      default: { icon: <AlertTriangle className="h-3 w-3" />, color: 'bg-yellow-100 text-yellow-700', label: 'Not Asked' },
-      unsupported: { icon: <BellOff className="h-3 w-3" />, color: 'bg-gray-100 text-gray-700', label: 'Unsupported' },
+      granted: { icon: <CheckCircle className="h-3 w-3" />, color: 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300', label: 'Granted' },
+      denied: { icon: <XCircle className="h-3 w-3" />, color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300', label: 'Denied' },
+      default: { icon: <AlertTriangle className="h-3 w-3" />, color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300', label: 'Not Asked' },
+      unsupported: { icon: <BellOff className="h-3 w-3" />, color: 'bg-muted text-muted-foreground', label: 'Unsupported' },
     };
     const v = variants[permission] || variants.default;
     return (
@@ -157,7 +150,7 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
   const getConnectionBadge = () => {
     const isConnected = connectionStatus === 'SUBSCRIBED';
     return (
-      <Badge className={`flex items-center gap-1 ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+      <Badge className={`flex items-center gap-1 ${isConnected ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'}`}>
         {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
         {connectionStatus}
       </Badge>
@@ -174,10 +167,10 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
   };
 
   return (
-    <Card className="backdrop-blur-sm bg-white/90 border-white/40 shadow-xl">
+    <Card className="backdrop-blur-sm bg-card/90 border-border/40 shadow-xl">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Bug className="h-5 w-5 text-purple-600" />
+        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+          <Bug className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           Notification Debug Panel
         </CardTitle>
         <CardDescription>
@@ -188,18 +181,18 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
         {/* Status Section */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-500">Push Permission</p>
+            <p className="text-xs font-medium text-muted-foreground">Push Permission</p>
             {getPermissionBadge()}
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-500">Realtime Connection</p>
+            <p className="text-xs font-medium text-muted-foreground">Realtime Connection</p>
             {getConnectionBadge()}
           </div>
         </div>
 
         {/* Diagnostics Info */}
         {diagnostics && (
-          <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
+          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs text-foreground">
             <p><span className="font-medium">Supported:</span> {diagnostics.supported ? 'Yes' : 'No'}</p>
             <p><span className="font-medium">Service Worker:</span> {diagnostics.serviceWorkerReady ? 'Ready' : 'Not Ready'}</p>
             <p><span className="font-medium">Mobile:</span> {diagnostics.isMobile ? 'Yes' : 'No'}</p>
@@ -208,82 +201,49 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
         )}
 
         {/* User Info */}
-        <div className="bg-blue-50 rounded-lg p-3 text-xs">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-xs text-foreground">
           <p><span className="font-medium">Role:</span> {userRole || 'Unknown'}</p>
           <p><span className="font-medium">User ID:</span> {userId ? `${userId.substring(0, 8)}...` : 'Unknown'}</p>
         </div>
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRequestPermission}
-            className="flex items-center gap-1"
-            disabled={permission === 'granted'}
-          >
-            <Bell className="h-3 w-3" />
-            Enable Push
+          <Button variant="outline" size="sm" onClick={handleRequestPermission} className="flex items-center gap-1" disabled={permission === 'granted'}>
+            <Bell className="h-3 w-3" /> Enable Push
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleTestNotification}
-            className="flex items-center gap-1"
-          >
-            <Send className="h-3 w-3" />
-            Test Notification
+          <Button variant="outline" size="sm" onClick={handleTestNotification} className="flex items-center gap-1">
+            <Send className="h-3 w-3" /> Test Notification
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleReconnect}
-            className="flex items-center gap-1"
-            disabled={!userRole || !userId}
-          >
-            <RefreshCw className="h-3 w-3" />
-            Force Reconnect
+          <Button variant="outline" size="sm" onClick={handleReconnect} className="flex items-center gap-1" disabled={!userRole || !userId}>
+            <RefreshCw className="h-3 w-3" /> Force Reconnect
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refreshStatus}
-            className="flex items-center gap-1"
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Status
+          <Button variant="outline" size="sm" onClick={refreshStatus} className="flex items-center gap-1" disabled={isRefreshing}>
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh Status
           </Button>
         </div>
 
         {/* Debug Logs */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-gray-500">Debug Logs</p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleClearLogs}
-              className="h-6 px-2 text-xs"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Clear
+            <p className="text-xs font-medium text-muted-foreground">Debug Logs</p>
+            <Button variant="ghost" size="sm" onClick={handleClearLogs} className="h-6 px-2 text-xs">
+              <Trash2 className="h-3 w-3 mr-1" /> Clear
             </Button>
           </div>
-          <ScrollArea className="h-40 rounded-md border bg-gray-50/50">
+          <ScrollArea className="h-40 rounded-md border border-border bg-muted/30">
             <div className="p-2 space-y-1">
               {logs.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">No logs yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No logs yet</p>
               ) : (
                 logs.map(log => (
                   <div key={log.id} className="flex items-start gap-2 text-xs">
                     {getLogIcon(log.type)}
                     <div className="flex-1 min-w-0">
-                      <span className="text-gray-400">
+                      <span className="text-muted-foreground">
                         {formatDateTime12hr(log.timestamp).split(' ').slice(1).join(' ')}
                       </span>
                       <span className="mx-1">-</span>
-                      <span className="text-gray-700">{log.message}</span>
+                      <span className="text-foreground">{log.message}</span>
                     </div>
                   </div>
                 ))
@@ -293,7 +253,7 @@ export const NotificationDebugPanel = memo(function NotificationDebugPanel({
         </div>
 
         {/* Instructions */}
-        <div className="bg-amber-50 rounded-lg p-3 text-xs text-amber-700">
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-300">
           <p className="font-medium mb-1">Testing Instructions:</p>
           <ol className="list-decimal list-inside space-y-1">
             <li>Ensure "Push Permission" is Granted</li>
